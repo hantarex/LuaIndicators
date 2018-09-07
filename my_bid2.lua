@@ -220,27 +220,28 @@ function WriteLogDeal(logfile, deal)
     }
   ))
 
+  local dateDeal = os.date("d.m.Y H:M:S");
+
   if deal == 1 then
     if myPosition.position ~= 1 and myPosition.price ~= nil and myPosition.price > t.param_value then
-      logfile:write("Покупка;" .. t.param_image .. ";1;0\n");
+      logfile:write(dateDeal..";Покупка;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
     elseif myPosition.position == 0 then
-      logfile:write("Покупка;" .. t.param_image .. ";1;1\n");
+      logfile:write(dateDeal..";Покупка;" .. t.param_image .. ";1;1\n");
       myPosition.position = 1
       myPosition.price = t.param_value
     end
   else -- продавать
     if myPosition.position ~= -1 and myPosition.price ~= nil and myPosition.price < t.param_value then
-      logfile:write("Продажа;" .. t.param_image .. ";1;0\n");
+      logfile:write(dateDeal..";Продажа;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
     elseif myPosition.position == 0 then
-      logfile:write("Продажа;" .. t.param_image .. ";1;-1\n");
+      logfile:write(dateDeal..";Продажа;" .. t.param_image .. ";1;-1\n");
       myPosition.position = -1
       myPosition.price = t.param_value
     else
-      PrintDbgStr("ok3")
     end
   end
   logfile:flush();
@@ -375,10 +376,6 @@ function OnCalculate(index)
     end
   end
 
-  if (currentIndex ~= index) then
-    currentIndex = index
-  end
-
   currentDateCandle = T(index)
 
   endIndex = getNumberOf("all_trades")-1
@@ -443,10 +440,11 @@ function OnCalculate(index)
 
 --  1 - ask
 --  -1 - bid
-  if bidSpeed > 1500 and currentIndex == Size() then WriteLogDeal(logDeal,-1) end
-  if askSpeed > 1500 and currentIndex == Size() then WriteLogDeal(logDeal,1) end
+  if bidSpeed > 1500 and index == Size() then WriteLogDeal(logDeal,-1) end
+  if askSpeed > 1500 and index == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
+    PrintDbgStr("Новая свеча");
     speedByDate = getSpeedByDate(T(index-1))
     label_params.YVALUE = 0 - label_Candle[index-1].bid
     label_params.TEXT = tostring(speedByDate.bid)
@@ -465,6 +463,21 @@ function OnCalculate(index)
     label_params.G=185
     label_params.B=116
     AddLabel(char_tag, label_params)
+  end
+
+--  if newCangde then
+--    PrintDbgStr("Новая свеча 1");
+--    PrintDbgStr(inspect(
+--      label_Candle[index-1]
+--    ))
+--    PrintDbgStr("cur "..currentIndex)
+--    PrintDbgStr(
+--      tostring(Size())
+--    )
+--  end
+
+  if (currentIndex ~= index) then
+    currentIndex = index
   end
 
   return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids
