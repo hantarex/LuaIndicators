@@ -220,7 +220,7 @@ function WriteLogDeal(logfile, deal)
     }
   ))
 
-  local dateDeal = os.date("d.m.Y H:M:S");
+  local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
 
   if deal == 1 then
     if myPosition.position ~= 1 and myPosition.price ~= nil and myPosition.price > t.param_value then
