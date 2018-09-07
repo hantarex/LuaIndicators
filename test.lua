@@ -1,5 +1,7 @@
 local inspect = require('inspect')
 
+print(10,000)
+
 now=os.time()
 print(now)
 tableDate =os.date("*t", now)

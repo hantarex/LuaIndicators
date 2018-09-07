@@ -1,7 +1,7 @@
 --logfile=io.open("C:\\SBERBANK\\QUIK_SMS\\LuaIndicators\\qlua_log.txt", "w")
 
 local inspect = require('inspect')
-local logfile, logCandle, logDate
+local logfile, logCandle, logDate, logDeal
 local newCangde = false
 
 local SEC_CODE = "";
@@ -17,6 +17,7 @@ local speed_interval = 10
 local label_params ={}
 local label_Candle ={}
 local char_tag = "d"
+local myPosition = {position = 0, price = nil}
 
 local dateNow = {
   day = 4,
@@ -207,6 +208,43 @@ function getDateIndex(t)
   return newDate
 end
 
+function WriteLogDeal(logfile, deal)
+  local t = getParamEx(CLASS_CODE, SEC_CODE, "last")
+
+  PrintDbgStr(inspect(
+    {
+      deal = deal,
+      position = myPosition.position,
+      price = t.param_image,
+      free_position = myPosition.position == 0
+    }
+  ))
+
+  if deal == 1 then
+    if myPosition.position ~= 1 and myPosition.price > t.param_value then
+      logfile:write("Покупка;" .. t.param_image .. ";1;0\n");
+      myPosition.position = 0
+      myPosition.price = nil
+    elseif myPosition.position == 0 then
+      logfile:write("Покупка;" .. t.param_image .. ";1;1\n");
+      myPosition.position = 1
+      myPosition.price = t.param_value
+    end
+  else -- продавать
+    if myPosition.position ~= -1 and myPosition.price < t.param_value then
+      logfile:write("Продажа;" .. t.param_image .. ";1;0\n");
+      myPosition.position = 0
+      myPosition.price = nil
+    elseif myPosition.position == 0 then
+      PrintDbgStr("ok")
+      logfile:write("Продажа;" .. t.param_image .. ";1;-1\n");
+      myPosition.position = -1
+      myPosition.price = t.param_value
+    end
+  end
+  logfile:flush();
+end;
+
 function fn(t)
   if t.sec_code == SEC_CODE and t.class_code == CLASS_CODE and listTradeNum[t.trade_num] == nil then
     local dateIndex = serial(getDateIndex(t.datetime))
@@ -256,6 +294,7 @@ function Init()
   logfile=io.open(getScriptPath() .. "/bid_"..os.date("%d%m%Y")..".txt", "w")
   logCandle=io.open(getScriptPath() .. "/candle_"..os.date("%d%m%Y")..".txt", "w")
   logDate=io.open(getScriptPath() .. "/dateIndex_"..os.date("%d%m%Y")..".txt", "w")
+  logDeal=io.open(getScriptPath() .. "/deal_"..os.date("%d%m%Y")..".txt", "w")
 
   label_params.IMAGE_PATH=""
   label_params.ALIGNMENT="TOP"
@@ -368,9 +407,9 @@ function OnCalculate(index)
 
 
 --    if debugCompare > 0 then
-  PrintDbgStr(inspect(
-    Size()
-  ))
+--  PrintDbgStr(inspect(
+--    Size()
+--  ))
 --    end
 
   if(label_Candle[index] == nil) then
@@ -400,6 +439,11 @@ function OnCalculate(index)
 
   label_Candle[index].bid = bids_count[indexTime].bids
   label_Candle[index].ask = bids_count[indexTime].asks
+
+--  1 - ask
+--  -1 - bid
+  if bidSpeed > 10 and currentIndex == Size() then WriteLogDeal(logDeal,-1) end
+  if askSpeed > 10 and currentIndex == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
     speedByDate = getSpeedByDate(T(index-1))
