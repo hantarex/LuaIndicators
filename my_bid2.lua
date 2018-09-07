@@ -13,10 +13,9 @@ local bids_count_speed = {}
 local listTradeNum = {}
 local curTrade = 0
 local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk, now, speed
-local label_params ={}
-local label_Candle ={}
-local char_tag = "delta"
 local speed_interval = 10
+local label_params ={}
+local char_tag = "d"
 
 local dateNow = {
   day = 4,
@@ -123,6 +122,35 @@ function dateCompare(d1, d2)
   end
 
   return -1
+end
+
+function getSpeedByDate(dateD)
+  now=os.time(dateD)
+  local speed = {bid = 0, ask = 0, vol = 0 }
+  local speedMax = {bid = 0, ask = 0, vol = 0 }
+  for i=now, (now+Interval*60) do
+    speed = {bid = 0, ask = 0, vol = 0 }
+    for b=0,(speed_interval-1) do
+      local date = os.date("%Y%m%d%H%M%S",i-b)
+      if bids_count_speed[date] == nil then
+        bids_count_speed[date] = {bids = 0, asks = 0, vol = 0 }
+      end
+      speed.bid = speed.bid + bids_count_speed[date].bids
+      speed.ask = speed.ask + bids_count_speed[date].asks
+      speed.vol = speed.vol + bids_count_speed[date].vol
+    end
+    speed.bid = speed.bid / speed_interval
+    speed.ask = speed.ask / speed_interval
+    speed.vol = speed.vol / speed_interval
+
+    if(speed.bid > speedMax.bid) then speedMax.bid = speed.bid end
+    if(speed.ask > speedMax.ask) then speedMax.ask = speed.ask end
+    if(speed.vol > speedMax.vol) then speedMax.vol = speed.vol end
+  end
+  --  PrintDbgStr(inspect(
+  --    speed
+  --  ))
+  return speedMax
 end
 
 function getSpeed()
@@ -237,7 +265,7 @@ function Init()
   label_params.G=0
   label_params.B=0
   label_params.FONT_FACE_NAME="Arial"
-  label_params.FONT_HEIGHT='5'
+  label_params.FONT_HEIGHT='8'
   label_params.DATE = os.date("%Y%m%d")
   label_params.TIME = os.date("%H%M%S")
   label_params.YVALUE = 0
@@ -343,9 +371,6 @@ function OnCalculate(index)
     Size()
   ))
 --    end
-  if(label_Candle[index] == nil) then
-    label_Candle[index] = {ask = 0, bid=0}
-  end
 
 --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
   askSpeed = round(speed.ask,2)
@@ -368,31 +393,26 @@ function OnCalculate(index)
   label_params.B=0
   SetLabelParams(char_tag, labelBid, label_params)
 
-  if(bidSpeed > label_Candle[index].bid) then label_Candle[index].bid = bidSpeed end
-  if(askSpeed > label_Candle[index].ask) then label_Candle[index].ask = askSpeed end
+  if newCangde and currentIndex < Size() and currentIndex > (Size() - 10) then
+    speedByDate = getSpeedByDate(T(index))
+    label_params.YVALUE = 0 - bids_count[indexTime].bids
+    label_params.TEXT = tostring(speedByDate.bid)
+    label_params.ALIGNMENT="BOTTOM"
+    label_params.R=255
+    label_params.DATE = string.format("%04d",T(index).year) .. string.format("%02d",T(index).month) .. string.format("%02d",T(index).day)
+    label_params.TIME = string.format("%02d",T(index).hour) .. string.format("%02d",T(index).min) .. string.format("%02d",T(index).sec)
+    label_params.G=0
+    label_params.B=0
+    AddLabel(char_tag, label_params)
 
---  if newCangde and label_Candle[index-1] ~= nil then
---    label_params.YVALUE = 0 - lastBids
---    label_params.TEXT = tostring(label_Candle[index-1].bid)
---    label_params.ALIGNMENT="BOTTOM"
---    label_params.R=255
---    label_params.DATE = string.format("%04d",T(index-1).year) .. string.format("%02d",T(index-1).month) .. string.format("%02d",T(index-1).day)
---    label_params.TIME = string.format("%02d",T(index-1).hour) .. string.format("%02d",T(index-1).min) .. string.format("%02d",T(index-1).sec)
---    label_params.G=0
---    label_params.B=0
---    AddLabel(char_tag, label_params)
---
---    label_params.YVALUE = lastAsks
---    label_params.TEXT = tostring(label_Candle[index-1].ask)
---    label_params.ALIGNMENT="TOP"
---    label_params.R=116
---    label_params.G=185
---    label_params.B=116
---    AddLabel(char_tag, label_params)
---  end
-
-  lastBids = bids_count[indexTime].bids
-  lastAsks = bids_count[indexTime].asks
+    label_params.YVALUE = bids_count[indexTime].asks
+    label_params.TEXT = tostring(speedByDate.ask)
+    label_params.ALIGNMENT="TOP"
+    label_params.R=116
+    label_params.G=185
+    label_params.B=116
+    AddLabel(char_tag, label_params)
+  end
 
   return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids
 end
