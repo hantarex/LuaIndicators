@@ -17,7 +17,8 @@ local speed_interval = 10
 local label_params ={}
 local label_Candle ={}
 local char_tag = "d"
-local myPosition = {position = 0, price = nil}
+local myPosition = {position = 0, price = nil }
+local fees = 0.1 -- Коммисия в процентах
 
 local dateNow = {
   day = 4,
@@ -208,6 +209,10 @@ function getDateIndex(t)
   return newDate
 end
 
+function priceMinusFees(price)
+  return round(price - price/100*fees, 2)
+end
+
 function WriteLogDeal(logfile, deal)
   local t = getParamEx(CLASS_CODE, SEC_CODE, "last")
 
@@ -223,7 +228,7 @@ function WriteLogDeal(logfile, deal)
   local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
 
   if deal == 1 then
-    if myPosition.position ~= 1 and myPosition.price ~= nil and myPosition.price > t.param_value then
+    if myPosition.position ~= 1 and myPosition.price ~= nil and priceMinusFees(myPosition.price) > t.param_value then
       logfile:write(dateDeal..";Покупка;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
@@ -233,7 +238,7 @@ function WriteLogDeal(logfile, deal)
       myPosition.price = t.param_value
     end
   else -- продавать
-    if myPosition.position ~= -1 and myPosition.price ~= nil and myPosition.price < t.param_value then
+    if myPosition.position ~= -1 and myPosition.price ~= nil and priceMinusFees(myPosition.price) < t.param_value then
       logfile:write(dateDeal..";Продажа;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
