@@ -449,7 +449,7 @@ function OnCalculate(index)
   if askSpeed > 1500 and index == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
-    PrintDbgStr("Новая свеча");
+--    PrintDbgStr("Новая свеча");
     speedByDate = getSpeedByDate(T(index-1))
     label_params.YVALUE = 0 - label_Candle[index-1].bid
     label_params.TEXT = tostring(speedByDate.bid)
