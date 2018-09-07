@@ -221,7 +221,7 @@ function WriteLogDeal(logfile, deal)
   ))
 
   if deal == 1 then
-    if myPosition.position ~= 1 and myPosition.price > t.param_value then
+    if myPosition.position ~= 1 and myPosition.price ~= nil and myPosition.price > t.param_value then
       logfile:write("Покупка;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
@@ -231,15 +231,16 @@ function WriteLogDeal(logfile, deal)
       myPosition.price = t.param_value
     end
   else -- продавать
-    if myPosition.position ~= -1 and myPosition.price < t.param_value then
+    if myPosition.position ~= -1 and myPosition.price ~= nil and myPosition.price < t.param_value then
       logfile:write("Продажа;" .. t.param_image .. ";1;0\n");
       myPosition.position = 0
       myPosition.price = nil
     elseif myPosition.position == 0 then
-      PrintDbgStr("ok")
       logfile:write("Продажа;" .. t.param_image .. ";1;-1\n");
       myPosition.position = -1
       myPosition.price = t.param_value
+    else
+      PrintDbgStr("ok3")
     end
   end
   logfile:flush();
@@ -442,8 +443,8 @@ function OnCalculate(index)
 
 --  1 - ask
 --  -1 - bid
-  if bidSpeed > 10 and currentIndex == Size() then WriteLogDeal(logDeal,-1) end
-  if askSpeed > 10 and currentIndex == Size() then WriteLogDeal(logDeal,1) end
+  if bidSpeed > 1500 and currentIndex == Size() then WriteLogDeal(logDeal,-1) end
+  if askSpeed > 1500 and currentIndex == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
     speedByDate = getSpeedByDate(T(index-1))
