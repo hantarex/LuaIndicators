@@ -15,6 +15,7 @@ local curTrade = 0
 local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk, now, speed
 local speed_interval = 10
 local label_params ={}
+local label_Candle ={}
 local char_tag = "d"
 
 local dateNow = {
@@ -372,6 +373,10 @@ function OnCalculate(index)
   ))
 --    end
 
+  if(label_Candle[index] == nil) then
+    label_Candle[index] = {ask = 0, bid=0}
+  end
+
 --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
   askSpeed = round(speed.ask,2)
   label_params.DATE = os.date("%Y%m%d")
@@ -393,19 +398,22 @@ function OnCalculate(index)
   label_params.B=0
   SetLabelParams(char_tag, labelBid, label_params)
 
-  if newCangde and currentIndex < Size() and currentIndex > (Size() - 10) then
-    speedByDate = getSpeedByDate(T(index))
-    label_params.YVALUE = 0 - bids_count[indexTime].bids
+  label_Candle[index].bid = bids_count[indexTime].bids
+  label_Candle[index].ask = bids_count[indexTime].asks
+
+  if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
+    speedByDate = getSpeedByDate(T(index-1))
+    label_params.YVALUE = 0 - label_Candle[index-1].bid
     label_params.TEXT = tostring(speedByDate.bid)
     label_params.ALIGNMENT="BOTTOM"
     label_params.R=255
-    label_params.DATE = string.format("%04d",T(index).year) .. string.format("%02d",T(index).month) .. string.format("%02d",T(index).day)
-    label_params.TIME = string.format("%02d",T(index).hour) .. string.format("%02d",T(index).min) .. string.format("%02d",T(index).sec)
+    label_params.DATE = string.format("%04d",T(index-1).year) .. string.format("%02d",T(index-1).month) .. string.format("%02d",T(index-1).day)
+    label_params.TIME = string.format("%02d",T(index-1).hour) .. string.format("%02d",T(index-1).min) .. string.format("%02d",T(index-1).sec)
     label_params.G=0
     label_params.B=0
     AddLabel(char_tag, label_params)
 
-    label_params.YVALUE = bids_count[indexTime].asks
+    label_params.YVALUE = label_Candle[index-1].ask
     label_params.TEXT = tostring(speedByDate.ask)
     label_params.ALIGNMENT="TOP"
     label_params.R=116
