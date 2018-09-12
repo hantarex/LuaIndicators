@@ -1,9 +1,9 @@
 --logfile=io.open("C:\\SBERBANK\\QUIK_SMS\\LuaIndicators\\qlua_log.txt", "w")
 
 local inspect = require('inspect')
+local TradeCondition = require('TradeCondition')
 local logfile, logCandle, logDate, logDeal
 local newCangde = false
-
 local SEC_CODE = "";
 local CLASS_CODE = "";
 local DSInfo, Interval;
@@ -19,6 +19,9 @@ local label_Candle ={}
 local char_tag = "d"
 local myPosition = {position = 0, price = nil }
 local fees = 0.1 -- Коммисия в процентах
+local needProfit = 0.0 -- Коммисия в процентах
+local stopOrder = 0.2 -- Если в минус на больший процент
+local myTrade
 
 local dateNow = {
   day = 4,
@@ -213,43 +216,68 @@ function priceMinusFees(price)
   return round(price - price/100*fees, 2)
 end
 
+function feesCalc(price)
+  return round(price/100*fees, 2)
+end
+
 function WriteLogDeal(logfile, deal)
+  if deal > 0 then
+    myTrade:setTrandSpeed(1)
+  else
+    myTrade:setTrandSpeed(-1)
+  end
+
   local t = getParamEx(CLASS_CODE, SEC_CODE, "last")
 
-  PrintDbgStr(inspect(
-    {
-      deal = deal,
-      position = myPosition.position,
-      price = t.param_image,
-      free_position = myPosition.position == 0
-    }
-  ))
+  myTrade:setCurrentBid(t)
 
-  local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
+--    PrintDbgStr(inspect(
+--      {
+--        deal = deal,
+--        position = myTrade:getPosition(),
+--        price = t.param_image,
+--        pos_price = myTrade:getPositionPrice(),
+--        param_value = t.param_value,
+--        profit = myTrade:getProfit(),
+--      }
+--    ))
 
-  if deal == 1 then
-    if myPosition.position ~= 1 and myPosition.price ~= nil and priceMinusFees(myPosition.price) > t.param_value then
-      logfile:write(dateDeal..";Покупка;" .. t.param_image .. ";1;0\n");
-      myPosition.position = 0
-      myPosition.price = nil
-    elseif myPosition.position == 0 then
-      logfile:write(dateDeal..";Покупка;" .. t.param_image .. ";1;1\n");
-      myPosition.position = 1
-      myPosition.price = t.param_value
+
+  if myTrade:isSpeedUp() then -- Растёт
+    PrintDbgStr("Растёт")
+--      PrintDbgStr(inspect(
+--        myTrade
+--      ))
+    if myTrade:isShort() then -- если в шорте
+      if myTrade:getProfit() > myTrade:needProfit() then -- если заработал то выходим из шорта
+        myTrade.closePosition(t.param_image)
+      end
+    elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
+      PrintDbgStr("Вход в LONG")
+      myTrade:goBuy(t.param_image)
+    elseif myTrade:isLong() then -- если в лонге
+      if myTrade:checkStop() then
+        myTrade.closePosition(t.param_image)
+      end
     end
-  else -- продавать
-    if myPosition.position ~= -1 and myPosition.price ~= nil and priceMinusFees(myPosition.price) < t.param_value then
-      logfile:write(dateDeal..";Продажа;" .. t.param_image .. ";1;0\n");
-      myPosition.position = 0
-      myPosition.price = nil
-    elseif myPosition.position == 0 then
-      logfile:write(dateDeal..";Продажа;" .. t.param_image .. ";1;-1\n");
-      myPosition.position = -1
-      myPosition.price = t.param_value
-    else
+  elseif myTrade:isSpeedDown() then -- падает
+    PrintDbgStr("Падает")
+    if myTrade:isLong() then -- если в лонге
+      if myTrade:getProfit() > myTrade:needProfit() then -- если заработал то выходим из лонга
+        myTrade.closePosition(t.param_image)
+      end
+    elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
+        PrintDbgStr("Вход в SHORT")
+        myTrade:goSell(t.param_image)
+    elseif myTrade:isShort() then -- если в шорте
+        if myTrade:checkStop() then
+          myTrade.closePosition(t.param_image)
+        end
     end
   end
-  logfile:flush();
+--  PrintDbgStr(inspect(
+--    myTrade
+--  ))
 end;
 
 function fn(t)
@@ -298,10 +326,11 @@ end
 
 
 function Init()
+  myTrade = TradeCondition(fees, needProfit, stopOrder)
+
   logfile=io.open(getScriptPath() .. "/bid_"..os.date("%d%m%Y")..".txt", "w")
   logCandle=io.open(getScriptPath() .. "/candle_"..os.date("%d%m%Y")..".txt", "w")
   logDate=io.open(getScriptPath() .. "/dateIndex_"..os.date("%d%m%Y")..".txt", "w")
-  logDeal=io.open(getScriptPath() .. "/deal_"..os.date("%d%m%Y")..".txt", "w")
 
   label_params.IMAGE_PATH=""
   label_params.ALIGNMENT="TOP"
@@ -336,6 +365,7 @@ function getMax(table)
 end
 
 function OnCalculate(index)
+  myTrade:setCandleIndex(index)
   if currentIndex ~= index then
     newCangde = true
   end
@@ -445,8 +475,8 @@ function OnCalculate(index)
 
 --  1 - ask
 --  -1 - bid
-  if bidSpeed > 1500 and index == Size() then WriteLogDeal(logDeal,-1) end
-  if askSpeed > 1500 and index == Size() then WriteLogDeal(logDeal,1) end
+  if bidSpeed > 10 and index == Size() then WriteLogDeal(logDeal,-1) end
+  if askSpeed > 10 and index == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
 --    PrintDbgStr("Новая свеча");

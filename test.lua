@@ -1,17 +1,37 @@
+TradeCondition = require('TradeCondition')
+
 local inspect = require('inspect')
 
-print(10,000)
+position = {
+    position = 0,
+    price = 12
+}
 
-now=os.time()
-print(now)
-tableDate =os.date("*t", now)
-print(inspect(
-    tableDate
-))
+--print(10,000)
+--
+--now=os.time()
+--print(now)
+--tableDate =os.date("*t", now)
+--print(inspect(
+--    tableDate
+--))
+--
+--function T()
+--    print "T"
+--end
+--
+--print(os.time(tableDate))
+--
+--print(os.date("%c",now-1))
+--
+--print(math.floor(10.333, 2))
+--for i=1,10 do print(i) end
+--
+--function TradeCondition:T()
+--    T()
+--end
+myTrade = TradeCondition(12)
 
-print(os.time(tableDate))
+myTrade:setPosition(1)
 
-print(os.date("%c",now-1))
-
-print(math.floor(10.333, 2))
-for i=1,10 do print(i) end
+print(inspect(myTrade))
