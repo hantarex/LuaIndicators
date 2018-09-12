@@ -35,6 +35,23 @@ function TradeCondition:create(fees, needProfit, stopOrder)
     return setmetatable(init, { __index = TradeCondition })
 end
 
+function TradeCondition:getProfit()
+    if self:getPositionPrice() == nil then
+        return nil
+    end
+    if self:isShort() then
+        local tax = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self:getFees()
+        local profit = self:getPositionPrice() - self:getCurrentPrice()
+        return profit - tax
+    end
+    if self:isLong() then
+        local tax = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self:getFees()
+        local profit = self:getCurrentPrice() - self:getPositionPrice()
+        return profit - tax
+    end
+    return 0
+end
+
 function TradeCondition:isLong()
     if self.position == 1 and self.positionPrice ~= nil then
         return true
@@ -102,7 +119,8 @@ end
 function TradeCondition:closePosition(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     PrintDbgStr("Закрытие позиции!")
-    if self:getProfit() < myTrade:getNeedProfit() then
+    self:getDebug(self:getProfit())
+    if self:getProfit() < self:getNeedProfit() then
         self.logfile:write(dateDeal..";Закрытие в минус\n");
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
@@ -151,18 +169,19 @@ function TradeCondition:goBuy(price)
     PrintDbgStr("Покупка!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";0;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
+        self.logfile:write("Цена идёт вниз по свече\n");
         self.logfile:flush()
         return false
     end
     if self:getPosition() == 0 then
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(price)
         self:setPosition(1)
     elseif self:getPosition() == -1 then
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(nil)
         self:setPosition(0)
     end
-    self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     self.logfile:flush()
     return false
 end
@@ -171,37 +190,21 @@ function TradeCondition:goSell(price)
     PrintDbgStr("Продажа!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";0;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
+        self.logfile:write("Цена идёт вверх по свече\n");
         self.logfile:flush()
         return false
     end
     if self:getPosition() == 0 then
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(price)
         self:setPosition(-1)
     elseif self:getPosition() == 1 then
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(nil)
         self:setPosition(0)
     end
-    self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     self.logfile:flush()
     return false
-end
-
-function TradeCondition:getProfit()
-    if self:getPositionPrice() == nil then
-        return nil
-    end
-    if self:isShort() then
-        local tax = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self:getFees()
-        local profit = self:getPositionPrice() - self:getCurrentPrice()
-        return profit - tax
-    end
-    if self:isLong() then
-        local tax = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self:getFees()
-        local profit = self:getCurrentPrice() - self:getPositionPrice()
-        return profit - tax
-    end
-    return 0
 end
 
 function TradeCondition:setCurrentBid(bid)
@@ -243,10 +246,15 @@ function TradeCondition:getCandleIndex()
     return self.candleIndex
 end
 
-function TradeCondition:getDebug()
+function TradeCondition:getDebug(dbg)
     PrintDbgStr(inspect(
       self
     ))
+    if dbg ~= nil then
+        PrintDbgStr(inspect(
+            dbg
+        ))
+    end
 end
 
 function TradeCondition:getPosition()
