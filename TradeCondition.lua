@@ -119,7 +119,7 @@ end
 function TradeCondition:closePosition(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     PrintDbgStr("Закрытие позиции!")
-    self:getDebug(self:getProfit())
+--    self:getDebug(self:getProfit())
     if self:getProfit() < self:getNeedProfit() then
         self.logfile:write(dateDeal..";Закрытие в минус\n");
     end
@@ -169,18 +169,18 @@ function TradeCondition:goBuy(price)
     PrintDbgStr("Покупка!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
-        self.logfile:write("Цена идёт вниз по свече\n");
-        self.logfile:flush()
+        PrintDbgStr("Цена идёт вниз по свече\n");
+--        self.logfile:flush()
         return false
     end
     if self:getPosition() == 0 then
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(price)
         self:setPosition(1)
-    elseif self:getPosition() == -1 then
         self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
-        self:setPositionPrice(nil)
+    elseif self:getPosition() == -1 then
         self:setPosition(0)
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
+        self:setPositionPrice(nil)
     end
     self.logfile:flush()
     return false
@@ -190,18 +190,19 @@ function TradeCondition:goSell(price)
     PrintDbgStr("Продажа!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
-        self.logfile:write("Цена идёт вверх по свече\n");
-        self.logfile:flush()
+        PrintDbgStr("Цена идёт вверх по свече\n");
+--        self.logfile:flush()
         return false
     end
     if self:getPosition() == 0 then
-        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(price)
         self:setPosition(-1)
-    elseif self:getPosition() == 1 then
         self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
-        self:setPositionPrice(nil)
+
+    elseif self:getPosition() == 1 then
         self:setPosition(0)
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
+        self:setPositionPrice(nil)
     end
     self.logfile:flush()
     return false
