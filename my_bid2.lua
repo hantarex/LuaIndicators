@@ -19,7 +19,7 @@ local label_Candle ={}
 local char_tag = "d"
 local myPosition = {position = 0, price = nil }
 local fees = 0.1 -- Коммисия в процентах
-local needProfit = 0.0 -- Коммисия в процентах
+local needProfit = 0.0 -- Необходимый доход
 local stopOrder = 0.2 -- Если в минус на больший процент
 local myTrade
 
@@ -249,29 +249,29 @@ function WriteLogDeal(logfile, deal)
 --        myTrade
 --      ))
     if myTrade:isShort() then -- если в шорте
-      if myTrade:getProfit() > myTrade:needProfit() then -- если заработал то выходим из шорта
-        myTrade.closePosition(t.param_image)
+      if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
+        myTrade.closePosition(t.param_value)
       end
     elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
       PrintDbgStr("Вход в LONG")
-      myTrade:goBuy(t.param_image)
+      myTrade:goBuy(t.param_value)
     elseif myTrade:isLong() then -- если в лонге
       if myTrade:checkStop() then
-        myTrade.closePosition(t.param_image)
+        myTrade.closePosition(t.param_value)
       end
     end
   elseif myTrade:isSpeedDown() then -- падает
     PrintDbgStr("Падает")
     if myTrade:isLong() then -- если в лонге
-      if myTrade:getProfit() > myTrade:needProfit() then -- если заработал то выходим из лонга
-        myTrade.closePosition(t.param_image)
+      if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из лонга
+        myTrade.closePosition(t.param_value)
       end
     elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
         PrintDbgStr("Вход в SHORT")
-        myTrade:goSell(t.param_image)
+        myTrade:goSell(t.param_value)
     elseif myTrade:isShort() then -- если в шорте
         if myTrade:checkStop() then
-          myTrade.closePosition(t.param_image)
+          myTrade.closePosition(t.param_value)
         end
     end
   end
