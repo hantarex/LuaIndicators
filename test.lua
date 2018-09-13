@@ -2,6 +2,8 @@ TradeCondition = require('TradeCondition')
 
 local inspect = require('inspect')
 
+
+
 position = {
     position = 0,
     price = 12
@@ -11,10 +13,12 @@ position = {
 --
 --now=os.time()
 --print(now)
---tableDate =os.date("*t", now)
---print(inspect(
---    tableDate
---))
+tableDate =os.time(os.date("!*t"))
+print(inspect(
+    tableDate
+))
+
+print(math.floor(12.213123))
 --
 --function T()
 --    print "T"
@@ -30,8 +34,8 @@ position = {
 --function TradeCondition:T()
 --    T()
 --end
-myTrade = TradeCondition(12)
+--myTrade = TradeCondition(12)
 
-myTrade:setPosition(1)
-
-print(inspect(myTrade))
+--myTrade:setPosition(1)
+--
+--print(inspect(myTrade))

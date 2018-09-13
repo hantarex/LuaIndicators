@@ -11,6 +11,7 @@ local Vol_Coeff = 1;
 local bids_count = {}
 local bids_count_speed = {}
 local listTradeNum = {}
+local ACCOUNT = "108191/001"
 local curTrade = 0
 local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk, now, speed
 local speed_interval = 10
@@ -18,10 +19,10 @@ local label_params ={}
 local label_Candle ={}
 local char_tag = "d"
 local myPosition = {position = 0, price = nil }
-local fees = 0.01 -- Коммисия в процентах
-local needProfit = 0.0 -- Необходимый доход
-local stopOrder = 0.1 -- Если в минус на больший процент
-local speedTrade = 10 -- начальная скорость срабатывания
+local fees = 0.12 -- Коммисия в процентах
+local needProfit = 0.05 -- Необходимый минималоьный доход
+local stopOrder = 0.2 -- Если в минус на больший процент
+local speedTrade = 600 -- начальная скорость срабатывания
 local myTrade
 
 local dateNow = {
@@ -388,6 +389,7 @@ function OnCalculate(index)
     Interval = DSInfo.interval
     startIndex = 0
     currentIndex = index
+    myTrade:setDSInfo(DSInfo)
     if labelBid == nil then
       label_params.DATE = os.date("%Y%m%d")
       label_params.TIME = os.date("%H%M%S")
@@ -517,4 +519,11 @@ function OnCalculate(index)
   end
 
   return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids
+end
+
+function OnTransReply(trans_reply)
+  --информирует о каждом получении результата обработки транзакций
+  PrintDbgStr(inspect(
+    trans_reply
+  ))
 end
