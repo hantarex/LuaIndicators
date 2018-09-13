@@ -29,7 +29,7 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed)
         ["ACTION"]     = "NEW_ORDER",
 --        ["OPERATION"]  = "S", -- покупка (BUY)
         ["TYPE"]       = "M", -- по рынку (MARKET)
-        ["QUANTITY"]   = "1", -- количество
+        ["QUANTITY"]   = "10", -- количество
         ["ACCOUNT"]    = "L01-00000F00",
         ["CLIENT_CODE"]    = "108191/001",
         ["PRICE"]      = "0"
@@ -248,15 +248,26 @@ end
 function TradeCondition:transactionSell()
     self.transactionMarket["OPERATION"]  = "S"
     local res = sendTransaction(self.transactionMarket)
+--    PrintDbgStr(inspect(
+--        self.transactionMarket
+--    ))
     self:iterateTransaction()
-    message(res)
+    if res ~= "" then
+        message("Транзакция %s не прошла проверку на стороне терминала QUIK")
+    else
+        message("Транзакция отправлена")
+    end
 end
 
 function TradeCondition:transactionBuy()
     self.transactionMarket["OPERATION"]  = "B"
     local res = sendTransaction(self.transactionMarket)
     self:iterateTransaction()
-    message(res)
+    if res ~= "" then
+        message("Транзакция %s не прошла проверку на стороне терминала QUIK")
+    else
+        message("Транзакция отправлена")
+    end
 end
 
 function TradeCondition:goSell(price)

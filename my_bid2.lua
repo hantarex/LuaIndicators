@@ -22,7 +22,7 @@ local myPosition = {position = 0, price = nil }
 local fees = 0.12 -- Коммисия в процентах
 local needProfit = 0.05 -- Необходимый минималоьный доход
 local stopOrder = 0.2 -- Если в минус на больший процент
-local speedTrade = 600 -- начальная скорость срабатывания
+local speedTrade = 1200 -- начальная скорость срабатывания
 local myTrade
 
 local dateNow = {
@@ -523,7 +523,8 @@ end
 
 function OnTransReply(trans_reply)
   --информирует о каждом получении результата обработки транзакций
-  PrintDbgStr(inspect(
-    trans_reply
-  ))
+  message(string.format("Получен ответ на транзакцию %i. Статус - %i [%s]",
+    trans_reply.trans_id,
+    trans_reply.status,
+    trans_reply.result_msg))
 end
