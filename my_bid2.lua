@@ -20,7 +20,8 @@ local char_tag = "d"
 local myPosition = {position = 0, price = nil }
 local fees = 0.01 -- Коммисия в процентах
 local needProfit = 0.0 -- Необходимый доход
-local stopOrder = 0.01 -- Если в минус на больший процент
+local stopOrder = 0.1 -- Если в минус на больший процент
+local speedTrade = 10 -- начальная скорость срабатывания
 local myTrade
 
 local dateNow = {
@@ -326,7 +327,7 @@ end
 
 
 function Init()
-  myTrade = TradeCondition(fees, needProfit, stopOrder)
+  myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade)
 
   logfile=io.open(getScriptPath() .. "/bid_"..os.date("%d%m%Y")..".txt", "w")
   logCandle=io.open(getScriptPath() .. "/candle_"..os.date("%d%m%Y")..".txt", "w")
@@ -475,8 +476,8 @@ function OnCalculate(index)
 
 --  1 - ask
 --  -1 - bid
-  if bidSpeed > 10 and index == Size() then WriteLogDeal(logDeal,-1) end
-  if askSpeed > 10 and index == Size() then WriteLogDeal(logDeal,1) end
+  if bidSpeed > myTrade:getSpeedTrade() and index == Size() then WriteLogDeal(logDeal,-1) end
+  if askSpeed > myTrade:getSpeedTrade() and index == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
 --    PrintDbgStr("Новая свеча");

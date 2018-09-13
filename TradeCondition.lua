@@ -16,7 +16,7 @@ setmetatable(TradeCondition, {
     end,
 })
 
-function TradeCondition:create(fees, needProfit, stopOrder)
+function TradeCondition:create(fees, needProfit, stopOrder, speed)
     local init = {
         positionPrice = nil,
         position = 0
@@ -31,8 +31,23 @@ function TradeCondition:create(fees, needProfit, stopOrder)
     if stopOrder ~= nil then
         init.stopOrder = stopOrder
     end
+
+    if speed ~= nil then
+        init.speed = speed
+    else
+        init.speed = 2000
+    end
+
     init.logfile = io.open(getScriptPath() .. "/deal_"..os.date("%d%m%Y").."_new.txt", "w")
     return setmetatable(init, { __index = TradeCondition })
+end
+
+function TradeCondition:getSpeedTrade()
+    return self.speed
+end
+
+function TradeCondition:setSpeedTrade(speed)
+    self.speed = speed
 end
 
 function TradeCondition:getProfit()
@@ -60,7 +75,7 @@ function TradeCondition:isLong()
 end
 
 function TradeCondition:getStopOrder()
-    return self.stopOrder
+    return self:round(tonumber(self:getPositionPrice()) / 100 * self.stopOrder , 2)
 end
 
 function TradeCondition:getColorCandle()
@@ -145,23 +160,30 @@ function TradeCondition:checkStop()
 --        self:getPositionPrice()
 --    ))
 
-    if self:isShort() then
-        local delta = tonumber(self:getCurrentPrice()) - tonumber(self:getPositionPrice())
-        local procent = round(tonumber(delta) / tonumber(self:getPositionPrice()), 2) * 100
-        if procent > self:getStopOrder() then
-            return true
-        else
-            return false
-        end
-    end
-    if self:isLong() then
-        local delta =  tonumber(self:getPositionPrice()) -  tonumber(self:getCurrentPrice())
-        local procent = round(tonumber(delta) / tonumber(self:getPositionPrice()), 2) * 100
-        if procent > self:getStopOrder() then
-            return true
-        else
-            return false
-        end
+--    if self:isShort() then
+    --        local delta = tonumber(self:getCurrentPrice()) - tonumber(self:getPositionPrice())
+    --        local procent = round(tonumber(delta) / tonumber(self:getPositionPrice()), 2) * 100
+    --        if procent > self:getStopOrder() then
+    --            return true
+    --        else
+    --            return false
+    --        end
+    --    end
+    --    if self:isLong() then
+    --        local delta =  tonumber(self:getPositionPrice()) -  tonumber(self:getCurrentPrice())
+    --        local procent = round(tonumber(delta) / tonumber(self:getPositionPrice()), 2) * 100
+    --        if procent > self:getStopOrder() then
+    --            return true
+    --        else
+    --            return false
+    --        end
+    --    end
+--    PrintDbgStr("Стоп? " .. (0 - self:getProfit) .." ".. self:getStopOrder())
+
+    if (0 - self:getProfit) > self:getStopOrder() then
+        return true
+    else
+        return false
     end
 end
 
