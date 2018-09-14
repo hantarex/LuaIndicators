@@ -17,9 +17,8 @@ local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk,
 local speed_interval = 10
 local label_params ={}
 local label_Candle ={}
-local char_tag = "d"
 local myPosition = {position = 0, price = nil }
-local fees = 0.12 -- Коммисия в процентах
+local fees = 0.17 -- Коммисия в процентах
 local needProfit = 0.05 -- Необходимый минималоьный доход
 local stopOrder = 0.2 -- Если в минус на больший процент
 local speedTrade = 1200 -- начальная скорость срабатывания
@@ -45,9 +44,10 @@ Settings =
  {
    Name = "my_db2",
    label = "TEST",
-   chart_tag = "TEST",
+   char_tag = "d",
    showVolume=1,
    inverse = 0,
+   isTraiding = 0,
    CountQuntOfDeals = 0,
    sum_quantity=1,
    showdelta=1,
@@ -328,11 +328,8 @@ end
 
 
 function Init()
-  myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade)
 
-  logfile=io.open(getScriptPath() .. "/bid_"..os.date("%d%m%Y")..".txt", "w")
-  logCandle=io.open(getScriptPath() .. "/candle_"..os.date("%d%m%Y")..".txt", "w")
-  logDate=io.open(getScriptPath() .. "/dateIndex_"..os.date("%d%m%Y")..".txt", "w")
+
 
   label_params.IMAGE_PATH=""
   label_params.ALIGNMENT="TOP"
@@ -367,28 +364,22 @@ function getMax(table)
 end
 
 function OnCalculate(index)
-  myTrade:setCandleIndex(index)
   if currentIndex ~= index then
     newCangde = true
   end
 --  debugCompare = dateCompare(T(index), dateNow)
-  WriteLog(logCandle, index..";"
-          ..O(index)..";"
-          ..H(index)..";"
-          ..L(index)..";"
-          ..L(index)..";"
-          ..C(index)..";"
-          ..V(index)..";"
-          ..serialDate(T(index))..";"
-  )
 
   if index == 1 then
+    myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade, Settings.isTraiding)
     DSInfo = getDataSourceInfo()
     SEC_CODE = DSInfo.sec_code
     CLASS_CODE = DSInfo.class_code
     Interval = DSInfo.interval
     startIndex = 0
     currentIndex = index
+    logfile=io.open(getScriptPath() .. "/bid_".. SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
+    logCandle=io.open(getScriptPath() .. "/candle_".. SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
+    logDate=io.open(getScriptPath() .. "/dateIndex_".. SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     myTrade:setDSInfo(DSInfo)
     if labelBid == nil then
       label_params.DATE = os.date("%Y%m%d")
@@ -399,7 +390,7 @@ function OnCalculate(index)
       label_params.R=116
       label_params.G=185
       label_params.B=116
-      labelBid = AddLabel(char_tag, label_params)
+      labelBid = AddLabel(Settings.char_tag, label_params)
     end
     if labelAsk == nil then
       label_params.DATE = os.date("%Y%m%d")
@@ -410,9 +401,22 @@ function OnCalculate(index)
       label_params.R=255
       label_params.G=0
       label_params.B=0
-      labelAsk = AddLabel(char_tag, label_params)
+      labelAsk = AddLabel(Settings.char_tag, label_params)
     end
   end
+
+  myTrade:setCandleIndex(index)
+
+
+  WriteLog(logCandle, index..";"
+          ..O(index)..";"
+          ..H(index)..";"
+          ..L(index)..";"
+          ..L(index)..";"
+          ..C(index)..";"
+          ..V(index)..";"
+          ..serialDate(T(index))..";"
+  )
 
   currentDateCandle = T(index)
 
@@ -462,7 +466,7 @@ function OnCalculate(index)
   label_params.R=116
   label_params.G=185
   label_params.B=116
-  SetLabelParams(char_tag, labelAsk, label_params)
+  SetLabelParams(Settings.char_tag, labelAsk, label_params)
 
   bidSpeed = round(speed.bid,2)
   label_params.YVALUE = 0 - bids_count[indexTime].bids
@@ -471,7 +475,7 @@ function OnCalculate(index)
   label_params.R=255
   label_params.G=0
   label_params.B=0
-  SetLabelParams(char_tag, labelBid, label_params)
+  SetLabelParams(Settings.char_tag, labelBid, label_params)
 
   label_Candle[index].bid = bids_count[indexTime].bids
   label_Candle[index].ask = bids_count[indexTime].asks
@@ -482,7 +486,6 @@ function OnCalculate(index)
   if askSpeed > myTrade:getSpeedTrade() and index == Size() then WriteLogDeal(logDeal,1) end
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
---    PrintDbgStr("Новая свеча");
     speedByDate = getSpeedByDate(T(index-1))
     label_params.YVALUE = 0 - label_Candle[index-1].bid
     label_params.TEXT = tostring(speedByDate.bid)
@@ -492,7 +495,7 @@ function OnCalculate(index)
     label_params.TIME = string.format("%02d",T(index-1).hour) .. string.format("%02d",T(index-1).min) .. string.format("%02d",T(index-1).sec)
     label_params.G=0
     label_params.B=0
-    AddLabel(char_tag, label_params)
+    AddLabel(Settings.char_tag, label_params)
 
     label_params.YVALUE = label_Candle[index-1].ask
     label_params.TEXT = tostring(speedByDate.ask)
@@ -500,7 +503,7 @@ function OnCalculate(index)
     label_params.R=116
     label_params.G=185
     label_params.B=116
-    AddLabel(char_tag, label_params)
+    AddLabel(Settings.char_tag, label_params)
   end
 
 --  if newCangde then

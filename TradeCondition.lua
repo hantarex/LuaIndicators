@@ -16,13 +16,15 @@ setmetatable(TradeCondition, {
     end,
 })
 
-function TradeCondition:create(fees, needProfit, stopOrder, speed)
+function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding)
     local init = {
         positionPrice = nil,
         DSInfo = nil,
         position = 0,
         transactionPrefix = os.time(os.date("!*t")),
         transactionPostfix = 1,
+        isTraiding = false,
+        logfile = nil
     }
     init.transactionMarket = {
         ["TRANS_ID"]   = tostring(init.transactionPostfix),
@@ -37,6 +39,15 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed)
     if fees ~= nil then
         init.fees = fees
     end
+
+    if isTraiding ~= nil then
+        if isTraiding == 1 then
+            init.isTraiding = true
+        else
+            init.isTraiding = false
+        end
+    end
+
     if needProfit ~= nil then
         init.needProfit = needProfit
     end
@@ -53,7 +64,7 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed)
         init.startSpeed = init.speed
     end
 
-    init.logfile = io.open(getScriptPath() .. "/deal_"..os.date("%d%m%Y").."_new.txt", "w")
+
     return setmetatable(init, { __index = TradeCondition })
 end
 
@@ -69,10 +80,15 @@ function TradeCondition:getDSInfo()
     return self.DSInfo
 end
 
+function TradeCondition:getIsTraiding()
+    return self.isTraiding
+end
+
 function TradeCondition:setDSInfo(ds)
     self.DSInfo = ds
     self.transactionMarket.CLASSCODE = self:getDSInfo().class_code
     self.transactionMarket.SECCODE = self:getDSInfo().sec_code
+    self.logfile = io.open(getScriptPath() .. "/deal_".. self.transactionMarket.SECCODE .."_"..os.date("%d%m%Y")..".txt", "w")
 end
 
 function TradeCondition:getStartSpeedTrade()
@@ -231,13 +247,17 @@ function TradeCondition:goBuy(price)
     if self:getPosition() == 0 then
         self:setPositionPrice(price)
         self:setPosition(1)
-        self:setSpeedTrade(self:getSpeedTrade() / 2)
-        self:transactionBuy()
+        self:setSpeedTrade(self:getSpeedTrade() / 3)
+        if self:getIsTraiding() then
+            self:transactionBuy()
+        end
         self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     elseif self:getPosition() == -1 then
         self:setPosition(0)
         self:setSpeedTrade(self:getStartSpeedTrade())
-        self:transactionBuy()
+        if self:getIsTraiding() then
+            self:transactionBuy()
+        end
         self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(nil)
     end
@@ -281,14 +301,18 @@ function TradeCondition:goSell(price)
     if self:getPosition() == 0 then
         self:setPositionPrice(price)
         self:setPosition(-1)
-        self:setSpeedTrade(self:getSpeedTrade() / 2)
-        self:transactionSell()
+        self:setSpeedTrade(self:getSpeedTrade() / 3)
+        if self:getIsTraiding() then
+            self:transactionSell()
+        end
         self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
 
     elseif self:getPosition() == 1 then
         self:setPosition(0)
         self:setSpeedTrade(self:getStartSpeedTrade())
-        self:transactionSell()
+        if self:getIsTraiding() then
+            self:transactionSell()
+        end
         self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
         self:setPositionPrice(nil)
     end
