@@ -19,9 +19,10 @@ local label_params ={}
 local label_Candle ={}
 local myPosition = {position = 0, price = nil }
 local fees = 0.17 -- Коммисия в процентах
-local needProfit = 0.05 -- Необходимый минималоьный доход
+local needProfit = 0.1 -- Необходимый минималоьный доход
+local needBestProfit = 0.2 -- Необходимый минималоьный доход
 local stopOrder = 0.2 -- Если в минус на больший процент
-local speedTrade = 1200 -- начальная скорость срабатывания
+local speedTrade = 2200 -- начальная скорость срабатывания
 local myTrade
 
 local dateNow = {
@@ -370,7 +371,7 @@ function OnCalculate(index)
 --  debugCompare = dateCompare(T(index), dateNow)
 
   if index == 1 then
-    myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade, Settings.isTraiding)
+    myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade, Settings.isTraiding, needBestProfit)
     DSInfo = getDataSourceInfo()
     SEC_CODE = DSInfo.sec_code
     CLASS_CODE = DSInfo.class_code
@@ -482,6 +483,8 @@ function OnCalculate(index)
 
 --  1 - ask
 --  -1 - bid
+  myTrade:setBidSpeed(bidSpeed)
+  myTrade:setAskSpeed(askSpeed)
   if bidSpeed > myTrade:getSpeedTrade() and index == Size() then WriteLogDeal(logDeal,-1) end
   if askSpeed > myTrade:getSpeedTrade() and index == Size() then WriteLogDeal(logDeal,1) end
 

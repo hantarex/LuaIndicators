@@ -16,7 +16,7 @@ setmetatable(TradeCondition, {
     end,
 })
 
-function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding)
+function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, needBestProfit)
     local init = {
         positionPrice = nil,
         DSInfo = nil,
@@ -24,7 +24,9 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding)
         transactionPrefix = os.time(os.date("!*t")),
         transactionPostfix = 1,
         isTraiding = false,
-        logfile = nil
+        logfile = nil,
+        askSpeed = 0,
+        bidSpeed =0,
     }
     init.transactionMarket = {
         ["TRANS_ID"]   = tostring(init.transactionPostfix),
@@ -50,6 +52,10 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding)
 
     if needProfit ~= nil then
         init.needProfit = needProfit
+    end
+
+    if needBestProfit ~= nil then
+        init.needBestProfit = needBestProfit
     end
 
     if stopOrder ~= nil then
@@ -78,6 +84,10 @@ end
 
 function TradeCondition:getDSInfo()
     return self.DSInfo
+end
+
+function TradeCondition:getNeedBestProfit()
+    return self.needBestProfit
 end
 
 function TradeCondition:getIsTraiding()
@@ -137,6 +147,14 @@ end
 
 function TradeCondition:setTrandSpeed(trand)
     self.trandSpeed = trand
+end
+
+function TradeCondition:setBidSpeed(speed)
+    self.bidSpeed = speed
+end
+
+function TradeCondition:setAskSpeed(speed)
+    self.askSpeed = speed
 end
 
 function TradeCondition:round(num, numDecimalPlaces)
@@ -241,8 +259,11 @@ function TradeCondition:goBuy(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
         PrintDbgStr("Цена идёт вниз по свече\n");
---        self.logfile:flush()
-        return false
+        if self:getBidSpeed() < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+            PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
+        else
+            return false
+        end
     end
     if self:getPosition() == 0 then
         self:setPositionPrice(price)
@@ -295,8 +316,11 @@ function TradeCondition:goSell(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
         PrintDbgStr("Цена идёт вверх по свече\n");
---        self.logfile:flush()
-        return false
+        if self:getBidSpeed() > self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+            PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
+        else
+            return false
+        end
     end
     if self:getPosition() == 0 then
         self:setPositionPrice(price)
@@ -322,6 +346,14 @@ end
 
 function TradeCondition:setCurrentBid(bid)
     self.bid = bid
+end
+
+function TradeCondition:getAskSpeed()
+    return self.askSpeed
+end
+
+function TradeCondition:getBidSpeed()
+    return self.bidSpeed
 end
 
 function TradeCondition:getNeedProfit()
