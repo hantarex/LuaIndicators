@@ -26,6 +26,7 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         isTraiding = false,
         logfile = nil,
         askSpeed = 0,
+        badDeal = 0,
         bidSpeed =0,
     }
     init.transactionMarket = {
@@ -198,12 +199,27 @@ function TradeCondition:isShort()
     return false
 end
 
+function TradeCondition:setLastDealMark(success)
+    if success == false then
+        self.badDeal = self.badDeal + 1
+    else
+        self.badDeal = 0
+    end
+end
+
+function TradeCondition:getLastDealMark()
+    return self.badDeal
+end
+
 function TradeCondition:closePosition(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     PrintDbgStr("Закрытие позиции!")
 --    self:getDebug(self:getProfit())
     if self:getProfit() < self:getNeedProfit() then
         self.logfile:write(dateDeal..";Закрытие в минус\n");
+        self:setLastDealMark(false);
+    else
+        self:setLastDealMark(true);
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:isShort() then
@@ -265,17 +281,17 @@ function TradeCondition:goBuy(price)
             return false
         end
     end
-    if self:getPosition() == 0 then
+    if self:getPosition() == 0 and self:getBidSpeed() < self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(1)
-        self:setSpeedTrade(self:getSpeedTrade() / 3)
+        self:setSpeedTrade(self:getSpeedTrade() / 5)
         if self:getIsTraiding() then
             self:transactionBuy()
         end
         self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     elseif self:getPosition() == -1 then
         self:setPosition(0)
-        self:setSpeedTrade(self:getStartSpeedTrade())
+        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.5*self:getStartSpeedTrade())
         if self:getIsTraiding() then
             self:transactionBuy()
         end
@@ -322,10 +338,10 @@ function TradeCondition:goSell(price)
             return false
         end
     end
-    if self:getPosition() == 0 then
+    if self:getPosition() == 0 and self:getBidSpeed() > self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(-1)
-        self:setSpeedTrade(self:getSpeedTrade() / 3)
+        self:setSpeedTrade(self:getSpeedTrade() / 5)
         if self:getIsTraiding() then
             self:transactionSell()
         end
@@ -333,7 +349,7 @@ function TradeCondition:goSell(price)
 
     elseif self:getPosition() == 1 then
         self:setPosition(0)
-        self:setSpeedTrade(self:getStartSpeedTrade())
+        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.5*self:getStartSpeedTrade())
         if self:getIsTraiding() then
             self:transactionSell()
         end
@@ -360,7 +376,7 @@ function TradeCondition:getNeedProfit()
     if self:getPositionPrice() == nil then
         return nil
     end
-    local need = self.round(tonumber(self:getPositionPrice()) / 100, 2) * self.needProfit
+    local need = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self.needProfit
     return need
 end
 

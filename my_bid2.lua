@@ -20,9 +20,10 @@ local label_Candle ={}
 local myPosition = {position = 0, price = nil }
 local fees = 0.17 -- Коммисия в процентах
 local needProfit = 0.1 -- Необходимый минималоьный доход
-local needBestProfit = 0.2 -- Необходимый минималоьный доход
+local needBestProfit = 0.2 -- Необходимый достаточный доход
 local stopOrder = 0.2 -- Если в минус на больший процент
-local speedTrade = 2200 -- начальная скорость срабатывания
+local speedTrade = 1800 -- начальная скорость срабатывания
+--local speedTrade = 30 -- начальная скорость срабатывания
 local myTrade
 
 local dateNow = {
@@ -247,7 +248,7 @@ function WriteLogDeal(logfile, deal)
 
 
   if myTrade:isSpeedUp() then -- Растёт
-    PrintDbgStr("Растёт " .. (myTrade:getProfit() ~= nil and myTrade:getProfit() or "nil")  .. " " .. (myTrade:getNeedProfit() ~=nil and myTrade:getNeedProfit() or "nil"))
+    PrintDbgStr("Растёт " .. (myTrade:getProfit() ~= nil and myTrade:getProfit() or "nil")  .. " " .. (myTrade:getNeedProfit() ~=nil and myTrade:getNeedProfit() or "nil") .. " " .. (myTrade:getPositionPrice() ~=nil and myTrade:getPositionPrice() or "nil") .. " ".. myTrade:getLastDealMark())
 --      PrintDbgStr(inspect(
 --        myTrade
 --      ))
@@ -264,7 +265,7 @@ function WriteLogDeal(logfile, deal)
 
     end
   elseif myTrade:isSpeedDown() then -- падает
-    PrintDbgStr("Падает " .. (myTrade:getProfit() ~= nil and myTrade:getProfit() or "nil") .. " " .. (myTrade:getNeedProfit() ~=nil and myTrade:getNeedProfit() or "nil"))
+    PrintDbgStr("Падает " .. (myTrade:getProfit() ~= nil and myTrade:getProfit() or "nil") .. " " .. (myTrade:getNeedProfit() ~=nil and myTrade:getNeedProfit() or "nil") .. " " .. (myTrade:getPositionPrice() ~=nil and myTrade:getPositionPrice() or "nil") .. " ".. myTrade:getLastDealMark())
     if myTrade:isLong() then -- если в лонге
       if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из лонга
         myTrade:closePosition(t.param_value)
