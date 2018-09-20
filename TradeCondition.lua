@@ -26,8 +26,11 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         isTraiding = false,
         logfile = nil,
         askSpeed = 0,
+        closeToMinus = false,
         badDeal = 0,
         bidSpeed =0,
+        O,
+        C
     }
     init.transactionMarket = {
         ["TRANS_ID"]   = tostring(init.transactionPostfix),
@@ -77,6 +80,22 @@ end
 
 function TradeCondition:getSpeedTrade()
     return self.speed
+end
+
+function TradeCondition:getCloseToMinus()
+    return self.closeToMinus
+end
+
+function TradeCondition:setCloseToMinus(set)
+    self.closeToMinus = set
+end
+
+function TradeCondition:setO(O)
+    self.O = O
+end
+
+function TradeCondition:setC(C)
+    self.C = C
 end
 
 function TradeCondition:iterateTransaction()
@@ -138,8 +157,22 @@ function TradeCondition:getStopOrder()
     return self:round(tonumber(self:getPositionPrice()) / 100 * (self.stopOrder + self:getFees()) , 2)
 end
 
+function TradeCondition:getO()
+    return self.O
+end
+
+function TradeCondition:getC()
+    return self.C
+end
+
 function TradeCondition:getColorCandle()
-    if O(self:getCandleIndex()) > C(self:getCandleIndex()) then
+    PrintDbgStr(inspect(
+        self:getO()
+    ))
+    PrintDbgStr(inspect(
+        self:getC()
+    ))
+    if self:getO() > self:getC() then
         return -1
     else
         return 1
@@ -217,9 +250,9 @@ function TradeCondition:closePosition(price)
 --    self:getDebug(self:getProfit())
     if self:getProfit() < self:getNeedProfit() then
         self.logfile:write(dateDeal..";Закрытие в минус\n");
-        self:setLastDealMark(false);
+        self:setCloseToMinus(true)
     else
-        self:setLastDealMark(true);
+        self:setCloseToMinus(false)
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:isShort() then
@@ -281,6 +314,13 @@ function TradeCondition:goBuy(price)
             return false
         end
     end
+
+    if self:getCloseToMinus() == true then
+        self:setLastDealMark(false);
+    else
+        self:setLastDealMark(true);
+    end
+
     if self:getPosition() == 0 and self:getBidSpeed() < self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(1)

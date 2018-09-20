@@ -26,16 +26,6 @@ local speedTrade = 1800 -- начальная скорость срабатывания
 --local speedTrade = 30 -- начальная скорость срабатывания
 local myTrade
 
-local dateNow = {
-  day = 4,
-  hour = 17,
-  min = 30,
-  month = 9,
-  week_day = 2,
-  year = 2018
-}
-
-local debugCompare
 --cache_VolBid={}
 --cache_VolAsk={}
 
@@ -288,12 +278,7 @@ function fn(t)
   if t.sec_code == SEC_CODE and t.class_code == CLASS_CODE and listTradeNum[t.trade_num] == nil then
     local dateIndex = serial(getDateIndex(t.datetime))
     local dateIndexSpeed = serialSec(t.datetime)
---    if debugCompare > 0 then
---      PrintDbgStr("hope")
---      PrintDbgStr(inspect(
---        dateIndex
---      ))
---    end
+
     if bids_count[dateIndex] == nil then
       bids_count[dateIndex] = { bids = 0, asks = 0, vol = 0}
     end
@@ -313,11 +298,6 @@ function fn(t)
     bids_count[dateIndex].vol = bids_count[dateIndex].vol + t.qty
     bids_count_speed[dateIndexSpeed].vol = bids_count_speed[dateIndexSpeed].vol + t.qty
 
---    if debugCompare > 0 then
---      PrintDbgStr(inspect(
---        bids_count[dateIndex]
---      ))
---    end
     listTradeNum[t.trade_num] = true
     speed = getSpeed()
     WriteLog(logfile, t.trade_num..";"..t.flags..";" ..t.price..";" ..t.qty..";" ..t.value..";" ..t.accruedint..";" ..t.yield..";" ..t.settlecode..";" ..t.reporate..";" ..t.repovalue..";" ..t.repo2value..";" ..t.repoterm..";" ..t.sec_code..";" ..t.class_code..";" ..dateIndex..";" ..t.period..";" ..t.open_interest..";" ..t.exchange_code..";" ..t.exec_market..";")
@@ -369,7 +349,6 @@ function OnCalculate(index)
   if currentIndex ~= index then
     newCangde = true
   end
---  debugCompare = dateCompare(T(index), dateNow)
 
   if index == 1 then
     myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade, Settings.isTraiding, needBestProfit)
@@ -408,6 +387,8 @@ function OnCalculate(index)
   end
 
   myTrade:setCandleIndex(index)
+  myTrade:setO(O(index))
+  myTrade:setC(C(index))
 
 
   WriteLog(logCandle, index..";"
@@ -433,26 +414,10 @@ function OnCalculate(index)
 
   local indexTime = serial(getDateIndex(T(index)))
 
---  if debugCompare > 0 then
---    PrintDbgStr("yes")
---    PrintDbgStr(inspect(
---      indexTime
---    ))
---    PrintDbgStr(inspect(
---      bids_count[indexTime]
---    ))
---  end
-
   if bids_count[indexTime] == nil then
     bids_count[indexTime] = { bids = 0, asks = 0, vol = 0}
   end
 
-
---    if debugCompare > 0 then
---  PrintDbgStr(inspect(
---    Size()
---  ))
---    end
 
   if(label_Candle[index] == nil) then
     label_Candle[index] = {ask = 0, bid=0}
