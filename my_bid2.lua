@@ -22,7 +22,7 @@ local fees = 0.17 -- Коммисия в процентах
 local needProfit = 0.1 -- Необходимый минималоьный доход
 local needBestProfit = 0.2 -- Необходимый достаточный доход
 local stopOrder = 0.2 -- Если в минус на больший процент
-local speedTrade = 1800 -- начальная скорость срабатывания
+local speedTrade = 2500 -- начальная скорость срабатывания
 --local speedTrade = 30 -- начальная скорость срабатывания
 local myTrade
 
@@ -91,6 +91,34 @@ function OnDestroy()
     bids_count
   ))
   logDate:close() -- Закрывает файл
+end
+
+function OnChangeSettings()
+  DelAllLabels(Settings.char_tag)
+  startIndex = nil
+  endIndex = nil
+  currentDateCandle = nil
+  currentIndex = nil
+  now = nil
+  speed = nil
+  label_params ={}
+  label_Candle ={}
+  myPosition = {position = 0, price = nil }
+  logfile = nil
+  logCandle = nil
+  logDate = nil
+  logDeal = nil
+  newCangde = false
+  SEC_CODE = "";
+  CLASS_CODE = "";
+  DSInfo = nil
+  Interval = nil
+  Vol_Coeff = 1;
+  bids_count = {}
+  bids_count_speed = {}
+  listTradeNum = {}
+  curTrade = 0
+  Init()
 end
 
 function dateCompare(d1, d2)
@@ -310,9 +338,6 @@ end
 
 
 function Init()
-
-
-
   label_params.IMAGE_PATH=""
   label_params.ALIGNMENT="TOP"
   label_params.TRANSPARENCY=50
@@ -345,6 +370,36 @@ function getMax(table)
   return high
 end
 
+function createLabelBid()
+  label_params.DATE = os.date("%Y%m%d")
+  label_params.TIME = os.date("%H%M%S")
+  label_params.YVALUE = 0
+  label_params.TEXT = "init"
+  label_params.ALIGNMENT="TOP"
+  label_params.R=116
+  label_params.G=185
+  label_params.B=116
+  labelBid = AddLabel(Settings.char_tag, label_params)
+  if labelBid == 1 then
+    DelLabel(Settings.char_tag,labelBid)
+  end
+end
+
+function createLabelAsk()
+  label_params.DATE = os.date("%Y%m%d")
+  label_params.TIME = os.date("%H%M%S")
+  label_params.YVALUE = 0
+  label_params.TEXT = "init"
+  label_params.ALIGNMENT="BOTTOM"
+  label_params.R=255
+  label_params.G=0
+  label_params.B=0
+  labelAsk = AddLabel(Settings.char_tag, label_params)
+  if labelAsk == 1 then
+    DelLabel(Settings.char_tag,labelAsk)
+  end
+end
+
 function OnCalculate(index)
   if currentIndex ~= index then
     newCangde = true
@@ -363,26 +418,10 @@ function OnCalculate(index)
     logDate=io.open(getScriptPath() .. "/dateIndex_".. SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     myTrade:setDSInfo(DSInfo)
     if labelBid == nil then
-      label_params.DATE = os.date("%Y%m%d")
-      label_params.TIME = os.date("%H%M%S")
-      label_params.YVALUE = 0
-      label_params.TEXT = "init"
-      label_params.ALIGNMENT="TOP"
-      label_params.R=116
-      label_params.G=185
-      label_params.B=116
-      labelBid = AddLabel(Settings.char_tag, label_params)
+      createLabelBid()
     end
     if labelAsk == nil then
-      label_params.DATE = os.date("%Y%m%d")
-      label_params.TIME = os.date("%H%M%S")
-      label_params.YVALUE = 0
-      label_params.TEXT = "init"
-      label_params.ALIGNMENT="BOTTOM"
-      label_params.R=255
-      label_params.G=0
-      label_params.B=0
-      labelAsk = AddLabel(Settings.char_tag, label_params)
+      createLabelAsk()
     end
   end
 
@@ -428,21 +467,37 @@ function OnCalculate(index)
   label_params.DATE = os.date("%Y%m%d")
   label_params.TIME = os.date("%H%M%S")
   label_params.YVALUE = bids_count[indexTime].asks
+--  label_params.TEXT = tostring(askSpeed) .. " t/s"
   label_params.TEXT = tostring(askSpeed) .. " t/s"
   label_params.ALIGNMENT="TOP"
   label_params.R=116
   label_params.G=185
   label_params.B=116
+  if GetLabelParams(Settings.char_tag, labelAsk) == nil then
+    createLabelAsk()
+  end
   SetLabelParams(Settings.char_tag, labelAsk, label_params)
 
   bidSpeed = round(speed.bid,2)
   label_params.YVALUE = 0 - bids_count[indexTime].bids
+--  label_params.TEXT = tostring(bidSpeed) .. " t/s"
   label_params.TEXT = tostring(bidSpeed) .. " t/s"
   label_params.ALIGNMENT="BOTTOM"
   label_params.R=255
   label_params.G=0
   label_params.B=0
+  if GetLabelParams(Settings.char_tag, labelBid) == nil then
+    createLabelBid()
+  end
   SetLabelParams(Settings.char_tag, labelBid, label_params)
+--  if currentIndex == Size() then
+--    PrintDbgStr(inspect(
+--      GetLabelParams(Settings.char_tag, labelBid)
+--    ))
+--    PrintDbgStr(inspect(
+--      labelBid
+--    ))
+--  end
 
   label_Candle[index].bid = bids_count[indexTime].bids
   label_Candle[index].ask = bids_count[indexTime].asks

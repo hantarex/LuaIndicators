@@ -16,7 +16,7 @@ setmetatable(TradeCondition, {
     end,
 })
 
-function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, needBestProfit)
+function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, needBestProfit, numTraiding)
     local init = {
         positionPrice = nil,
         DSInfo = nil,
@@ -30,17 +30,8 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         badDeal = 0,
         bidSpeed =0,
         O,
-        C
-    }
-    init.transactionMarket = {
-        ["TRANS_ID"]   = tostring(init.transactionPostfix),
-        ["ACTION"]     = "NEW_ORDER",
---        ["OPERATION"]  = "S", -- покупка (BUY)
-        ["TYPE"]       = "M", -- по рынку (MARKET)
-        ["QUANTITY"]   = "10", -- количество
-        ["ACCOUNT"]    = "L01-00000F00",
-        ["CLIENT_CODE"]    = "108191/001",
-        ["PRICE"]      = "0"
+        C,
+        numTraiding = 1
     }
     if fees ~= nil then
         init.fees = fees
@@ -56,6 +47,10 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
 
     if needProfit ~= nil then
         init.needProfit = needProfit
+    end
+
+    if numTraiding ~= nil then
+        init.numTraiding = numTraiding
     end
 
     if needBestProfit ~= nil then
@@ -74,12 +69,25 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         init.startSpeed = init.speed
     end
 
-
+    init.transactionMarket = {
+        ["TRANS_ID"]   = tostring(init.transactionPostfix),
+        ["ACTION"]     = "NEW_ORDER",
+        --        ["OPERATION"]  = "S", -- покупка (BUY)
+        ["TYPE"]       = "M", -- по рынку (MARKET)
+        ["QUANTITY"]   = tostring(init.numTraiding), -- количество
+        ["ACCOUNT"]    = "L01-00000F00",
+        ["CLIENT_CODE"]    = "108191/001",
+        ["PRICE"]      = "0"
+    }
     return setmetatable(init, { __index = TradeCondition })
 end
 
 function TradeCondition:getSpeedTrade()
     return self.speed
+end
+
+function TradeCondition:getNumTraiding()
+    return self.numTraiding
 end
 
 function TradeCondition:getCloseToMinus()
@@ -118,7 +126,7 @@ function TradeCondition:setDSInfo(ds)
     self.DSInfo = ds
     self.transactionMarket.CLASSCODE = self:getDSInfo().class_code
     self.transactionMarket.SECCODE = self:getDSInfo().sec_code
-    self.logfile = io.open(getScriptPath() .. "/deal_".. self.transactionMarket.SECCODE .."_"..os.date("%d%m%Y")..".txt", "w")
+    self.logfile = io.open(getScriptPath() .. "/log/deal_".. self.transactionMarket.SECCODE .."_"..os.date("%d%m%Y%H%M%S")..".txt", "w")
 end
 
 function TradeCondition:getStartSpeedTrade()
@@ -308,7 +316,7 @@ function TradeCondition:goBuy(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
         PrintDbgStr("Цена идёт вниз по свече\n");
-        if self:getBidSpeed() < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+        if (self:getBidSpeed() * 1.5) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
         else
             return false
@@ -321,7 +329,7 @@ function TradeCondition:goBuy(price)
         self:setLastDealMark(true);
     end
 
-    if self:getPosition() == 0 and self:getBidSpeed() < self:getAskSpeed() then
+    if self:getPosition() == 0 and (self:getBidSpeed() * 1.5) < self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(1)
         self:setSpeedTrade(self:getSpeedTrade() / 5)
@@ -331,7 +339,7 @@ function TradeCondition:goBuy(price)
         self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     elseif self:getPosition() == -1 then
         self:setPosition(0)
-        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.5*self:getStartSpeedTrade())
+        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
         if self:getIsTraiding() then
             self:transactionBuy()
         end
@@ -345,9 +353,6 @@ end
 function TradeCondition:transactionSell()
     self.transactionMarket["OPERATION"]  = "S"
     local res = sendTransaction(self.transactionMarket)
---    PrintDbgStr(inspect(
---        self.transactionMarket
---    ))
     self:iterateTransaction()
     if res ~= "" then
         message("Транзакция %s не прошла проверку на стороне терминала QUIK")
@@ -372,13 +377,14 @@ function TradeCondition:goSell(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
         PrintDbgStr("Цена идёт вверх по свече\n");
-        if self:getBidSpeed() > self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+        if self:getBidSpeed() > (self:getAskSpeed() * 1.5)
+                and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
         else
             return false
         end
     end
-    if self:getPosition() == 0 and self:getBidSpeed() > self:getAskSpeed() then
+    if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.5) then
         self:setPositionPrice(price)
         self:setPosition(-1)
         self:setSpeedTrade(self:getSpeedTrade() / 5)
@@ -389,7 +395,7 @@ function TradeCondition:goSell(price)
 
     elseif self:getPosition() == 1 then
         self:setPosition(0)
-        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.5*self:getStartSpeedTrade())
+        self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
         if self:getIsTraiding() then
             self:transactionSell()
         end
