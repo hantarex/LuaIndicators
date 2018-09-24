@@ -90,6 +90,10 @@ function TradeCondition:getNumTraiding()
     return self.numTraiding
 end
 
+function TradeCondition:setAccount(account)
+    self.transactionMarket["ACCOUNT"] = account
+end
+
 function TradeCondition:getCloseToMinus()
     return self.closeToMinus
 end
@@ -256,7 +260,9 @@ function TradeCondition:closePosition(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     PrintDbgStr("Закрытие позиции!")
 --    self:getDebug(self:getProfit())
-    if self:getProfit() < self:getNeedProfit() then
+    if self:getProfit() < self:getNeedProfit()
+            and ((self:getColorCandle() ~= 1 and self:isLong()) or (self:getColorCandle() ~= -1 and self:isShort()))
+    then
         self.logfile:write(dateDeal..";Закрытие в минус\n");
         self:setCloseToMinus(true)
     else
@@ -316,7 +322,7 @@ function TradeCondition:goBuy(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
         PrintDbgStr("Цена идёт вниз по свече\n");
-        if (self:getBidSpeed() * 1.5) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+        if (self:getBidSpeed() * 1.2) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
         else
             return false
@@ -329,10 +335,10 @@ function TradeCondition:goBuy(price)
         self:setLastDealMark(true);
     end
 
-    if self:getPosition() == 0 and (self:getBidSpeed() * 1.5) < self:getAskSpeed() then
+    if self:getPosition() == 0 and (self:getBidSpeed() * 1.2) < self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(1)
-        self:setSpeedTrade(self:getSpeedTrade() / 5)
+        self:setSpeedTrade(self:getSpeedTrade() / 7)
         if self:getIsTraiding() then
             self:transactionBuy()
         end
@@ -377,17 +383,17 @@ function TradeCondition:goSell(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
         PrintDbgStr("Цена идёт вверх по свече\n");
-        if self:getBidSpeed() > (self:getAskSpeed() * 1.5)
+        if self:getBidSpeed() > (self:getAskSpeed() * 1.2)
                 and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
         else
             return false
         end
     end
-    if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.5) then
+    if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.2) then
         self:setPositionPrice(price)
         self:setPosition(-1)
-        self:setSpeedTrade(self:getSpeedTrade() / 5)
+        self:setSpeedTrade(self:getSpeedTrade() / 7)
         if self:getIsTraiding() then
             self:transactionSell()
         end

@@ -256,6 +256,7 @@ function main()
     logCandle=io.open(getScriptPath() .. "/candle_".. config.SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     logDate=io.open(getScriptPath() .. "/dateIndex_".. config.SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     myTrade = TradeCondition(config.fees, config.needProfit, config.stopOrder, config.speedTrade, config.isTraiding, config.needBestProfit, config.numTraiding)
+    myTrade:setAccount(config.ACCOUNT)
     myTrade:setDSInfo({
         class_code= config.CLASS_CODE,
         sec_code= config.SEC_CODE,
