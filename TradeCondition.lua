@@ -322,7 +322,7 @@ function TradeCondition:goBuy(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
         PrintDbgStr("Цена идёт вниз по свече\n");
-        if (self:getBidSpeed() * 1.2) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+        if (self:getBidSpeed() * 1.3) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
         else
             return false
@@ -383,7 +383,7 @@ function TradeCondition:goSell(price)
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
         PrintDbgStr("Цена идёт вверх по свече\n");
-        if self:getBidSpeed() > (self:getAskSpeed() * 1.2)
+        if self:getBidSpeed() > (self:getAskSpeed() * 1.3)
                 and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
         else
