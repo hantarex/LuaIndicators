@@ -27,16 +27,18 @@ function TradeCondition:create(options)
         isTraiding = false,
         logfile = nil,
         askSpeed = 0,
+        isClose = 0,
         closeToMinus = false,
         badDeal = 0,
         bidSpeed =0,
         speedKoef = 7,
+        isIndex = false,
         O,
         C,
         numTraiding = 1
     }
-    if fees ~= nil then
-        init.fees = fees
+    if options.fees ~= nil then
+        init.fees = options.fees
     end
 
     if options.isTraiding ~= nil then
@@ -44,6 +46,14 @@ function TradeCondition:create(options)
             init.isTraiding = true
         else
             init.isTraiding = false
+        end
+    end
+
+    if options.isIndex ~= nil then
+        if options.isIndex == 1 then
+            init.isIndex = true
+        else
+            init.isIndex = false
         end
     end
 
@@ -67,9 +77,9 @@ function TradeCondition:create(options)
         init.stopOrder = options.stopOrder
     end
 
-    if options.speed ~= nil then
-        init.speed = options.speed
-        init.startSpeed = options.speed
+    if options.speedTrade ~= nil then
+        init.speed = options.speedTrade
+        init.startSpeed = options.speedTrade
     else
         init.speed = 2000
         init.startSpeed = init.speed
@@ -92,8 +102,20 @@ function TradeCondition:getSpeedTrade()
     return self.speed
 end
 
+function TradeCondition:getIsClose()
+    return self.isClose
+end
+
+function TradeCondition:setIsClose(set)
+    self.isClose = set
+end
+
 function TradeCondition:getNumTraiding()
     return self.numTraiding
+end
+
+function TradeCondition:checkIndex()
+    return self.isIndex
 end
 
 function TradeCondition:getSpeedKoef()
@@ -283,11 +305,13 @@ function TradeCondition:closePosition(price)
         self:setCloseToMinus(false)
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
+    self:setIsClose(1)
     if self:isShort() then
         self:goBuy(price)
     elseif self:isLong() then
         self:goSell(price)
     end
+    self:setIsClose(0)
     return false
 end
 
@@ -335,9 +359,13 @@ function TradeCondition:goBuy(price)
     PrintDbgStr("Покупка!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
-        PrintDbgStr("Цена идёт вниз по свече\n");
+        PrintDbgStr("Цена идёт вниз по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
         if (self:getBidSpeed() * 1.3) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
+--        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
+--            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
+        elseif self:checkIndex() and self:getIsClose() then
+            PrintDbgStr("Закрытие в индексе!\n");
         else
             return false
         end
@@ -396,10 +424,14 @@ function TradeCondition:goSell(price)
     PrintDbgStr("Продажа!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
-        PrintDbgStr("Цена идёт вверх по свече\n");
+        PrintDbgStr("Цена идёт вверх по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
         if self:getBidSpeed() > (self:getAskSpeed() * 1.3)
                 and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
+--        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
+--            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
+        elseif self:checkIndex() and self:getIsClose() then
+            PrintDbgStr("Закрытие в индексе!\n");
         else
             return false
         end

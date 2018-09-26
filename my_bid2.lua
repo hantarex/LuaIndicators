@@ -406,7 +406,14 @@ function OnCalculate(index)
   end
 
   if index == 1 then
-    myTrade = TradeCondition(fees, needProfit, stopOrder, speedTrade, Settings.isTraiding, needBestProfit)
+    myTrade = TradeCondition{
+      fees = fees,
+      needProfit = needProfit,
+      stopOrder = stopOrder,
+      speedTrade = speedTrade,
+      isTraiding = Settings.isTraiding,
+      needBestProfit = needBestProfit
+    }
     DSInfo = getDataSourceInfo()
     SEC_CODE = DSInfo.sec_code
     CLASS_CODE = DSInfo.class_code
