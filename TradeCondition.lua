@@ -16,7 +16,8 @@ setmetatable(TradeCondition, {
     end,
 })
 
-function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, needBestProfit, numTraiding)
+--function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, needBestProfit, numTraiding, speedKoef)
+function TradeCondition:create(options)
     local init = {
         positionPrice = nil,
         DSInfo = nil,
@@ -29,6 +30,7 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         closeToMinus = false,
         badDeal = 0,
         bidSpeed =0,
+        speedKoef = 7,
         O,
         C,
         numTraiding = 1
@@ -37,33 +39,37 @@ function TradeCondition:create(fees, needProfit, stopOrder, speed, isTraiding, n
         init.fees = fees
     end
 
-    if isTraiding ~= nil then
-        if isTraiding == 1 then
+    if options.isTraiding ~= nil then
+        if options.isTraiding == 1 then
             init.isTraiding = true
         else
             init.isTraiding = false
         end
     end
 
-    if needProfit ~= nil then
-        init.needProfit = needProfit
+    if options.needProfit ~= nil then
+        init.needProfit = options.needProfit
     end
 
-    if numTraiding ~= nil then
-        init.numTraiding = numTraiding
+    if options.numTraiding ~= nil then
+        init.numTraiding = options.numTraiding
     end
 
-    if needBestProfit ~= nil then
-        init.needBestProfit = needBestProfit
+    if options.speedKoef ~= nil then
+        init.speedKoef = options.speedKoef
     end
 
-    if stopOrder ~= nil then
-        init.stopOrder = stopOrder
+    if options.needBestProfit ~= nil then
+        init.needBestProfit = options.needBestProfit
     end
 
-    if speed ~= nil then
-        init.speed = speed
-        init.startSpeed = speed
+    if options.stopOrder ~= nil then
+        init.stopOrder = options.stopOrder
+    end
+
+    if options.speed ~= nil then
+        init.speed = options.speed
+        init.startSpeed = options.speed
     else
         init.speed = 2000
         init.startSpeed = init.speed
@@ -88,6 +94,14 @@ end
 
 function TradeCondition:getNumTraiding()
     return self.numTraiding
+end
+
+function TradeCondition:getSpeedKoef()
+    return self.speedKoef
+end
+
+function TradeCondition:setSpeedKoef(k)
+    self.speedKoef = k
 end
 
 function TradeCondition:setAccount(account)
@@ -338,7 +352,7 @@ function TradeCondition:goBuy(price)
     if self:getPosition() == 0 and (self:getBidSpeed() * 1.2) < self:getAskSpeed() then
         self:setPositionPrice(price)
         self:setPosition(1)
-        self:setSpeedTrade(self:getSpeedTrade() / 7)
+        self:setSpeedTrade(self:getSpeedTrade() / self:getSpeedKoef())
         if self:getIsTraiding() then
             self:transactionBuy()
         end
@@ -393,7 +407,7 @@ function TradeCondition:goSell(price)
     if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.2) then
         self:setPositionPrice(price)
         self:setPosition(-1)
-        self:setSpeedTrade(self:getSpeedTrade() / 7)
+        self:setSpeedTrade(self:getSpeedTrade() / self:getSpeedKoef())
         if self:getIsTraiding() then
             self:transactionSell()
         end
