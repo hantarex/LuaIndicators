@@ -306,11 +306,11 @@ function TradeCondition:closePosition(price)
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     self:setIsClose(1)
-    if self:isShort() then
-        self:goBuy(price)
-    elseif self:isLong() then
-        self:goSell(price)
-    end
+--    if self:isShort() then
+--        self:goBuy(price)
+--    elseif self:isLong() then
+--        self:goSell(price)
+--    end
     self:setIsClose(0)
     return false
 end
@@ -364,7 +364,7 @@ function TradeCondition:goBuy(price)
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
 --        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
 --            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
-        elseif self:checkIndex() and self:getIsClose() then
+        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() < self:getAskSpeed() then
             PrintDbgStr("Закрытие в индексе!\n");
         else
             return false
@@ -430,7 +430,7 @@ function TradeCondition:goSell(price)
             PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
 --        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
 --            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
-        elseif self:checkIndex() and self:getIsClose() then
+        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() > self:getAskSpeed() then
             PrintDbgStr("Закрытие в индексе!\n");
         else
             return false

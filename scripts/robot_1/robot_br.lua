@@ -252,6 +252,11 @@ function main()
 --    iup.MainLoop()
     startIndex = 0
     Interval = config.interval
+
+    if config.speed_interval ~= nil then
+        speed_interval = config.speed_interval
+    end
+
     logfile=io.open(getScriptPath() .. "/bid_".. config.SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     logCandle=io.open(getScriptPath() .. "/candle_".. config.SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
     logDate=io.open(getScriptPath() .. "/dateIndex_".. config.SEC_CODE .. "_" .. os.date("%d%m%Y")..".txt", "w")
