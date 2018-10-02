@@ -13,7 +13,7 @@ local bids_count_speed = {}
 local listTradeNum = {}
 local ACCOUNT = "108191/001"
 local curTrade = 0
-local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk, now, speed
+local startIndex, endIndex, currentDateCandle, currentIndex, labelBid, labelAsk, now, speed,labelAskSpeed ,labelBidSpeed
 local speed_interval = 10
 local label_params ={}
 local label_Candle ={}
@@ -25,6 +25,7 @@ local stopOrder = 0.2 -- ≈сли в минус на больший процент
 local speedTrade = 2500 -- начальна€ скорость срабатывани€
 --local speedTrade = 30 -- начальна€ скорость срабатывани€
 local myTrade
+local speedHistory ={}
 
 --cache_VolBid={}
 --cache_VolAsk={}
@@ -58,6 +59,18 @@ Settings =
        Color = RGB(255, 25, 25),
        Type = TYPE_HISTOGRAM,
        Width = 3
+     },
+     {
+       Name = "Speed Asks",
+       Color = RGB(24, 139, 24),
+       Type = TYPE_LINE,
+       Width = 1
+     },
+     {
+       Name = "Speed Bids",
+       Color = RGB(255, 25, 25),
+       Type = TYPE_LINE,
+       Width = 1
      },
 --     {
 --       Name = "Vol",
@@ -353,7 +366,7 @@ function Init()
   label_params.YVALUE = 0
   label_params.TEXT = "init"
 --  ParamRequest("TQBR", "SBER", "all_trades");
-  return 2
+  return 4
 end
 
 --function dateConvert(t)
@@ -400,12 +413,37 @@ function createLabelAsk()
   end
 end
 
+function createLabelAskSpeed()
+  label_params.DATE = os.date("%Y%m%d")
+  label_params.TIME = os.date("%H%M%S")
+  label_params.YVALUE = 0
+  label_params.TEXT = "init"
+  label_params.ALIGNMENT="BOTTOM"
+  label_params.R=255
+  label_params.G=0
+  label_params.B=0
+  labelAskSpeed = AddLabel(Settings.char_tag, label_params)
+end
+
+function createLabelBidSpeed()
+  label_params.DATE = os.date("%Y%m%d")
+  label_params.TIME = os.date("%H%M%S")
+  label_params.YVALUE = 0
+  label_params.TEXT = "init"
+  label_params.ALIGNMENT="BOTTOM"
+  label_params.R=255
+  label_params.G=0
+  label_params.B=0
+  labelBidSpeed = AddLabel(Settings.char_tag, label_params)
+end
+
 function OnCalculate(index)
   if currentIndex ~= index then
     newCangde = true
   end
 
   if index == 1 then
+    local avarage_bid = {asks = 0, bids = 0 }
     myTrade = TradeCondition{
       fees = fees,
       needProfit = needProfit,
@@ -429,6 +467,17 @@ function OnCalculate(index)
     end
     if labelAsk == nil then
       createLabelAsk()
+    end
+
+    if labelAskSpeed == nil then
+      createLabelAskSpeed()
+    end
+    if labelBidSpeed == nil then
+      createLabelBidSpeed()
+    end
+
+    if labelAskSpeed == nil then
+      createLabelAskSpeed()
     end
   end
 
@@ -518,6 +567,7 @@ function OnCalculate(index)
 
   if newCangde and label_Candle[index-1] ~= nil and currentIndex < Size() and currentIndex > (Size() - 20) then
     speedByDate = getSpeedByDate(T(index-1))
+    speedHistory[index] = speedByDate
     label_params.YVALUE = 0 - label_Candle[index-1].bid
     label_params.TEXT = tostring(speedByDate.bid)
     label_params.ALIGNMENT="BOTTOM"
@@ -537,11 +587,48 @@ function OnCalculate(index)
     AddLabel(Settings.char_tag, label_params)
   end
 
+  local avarage_bid = {asks = 0, bids = 0 }
+  local maxVol = {ask = 0, bid = 0}
+  for name in pairs(bids_count) do
+    if bids_count[name].asks > maxVol.ask then maxVol.ask = bids_count[name].asks end
+    if bids_count[name].bids > maxVol.bid then maxVol.bid = bids_count[name].bids end
+  end
+
+  local count_speed=1
+  for name in pairs(speedHistory) do
+    avarage_bid.asks = avarage_bid.asks + speedHistory[name].ask
+    avarage_bid.bids = avarage_bid.bids + speedHistory[name].bid
+    count_speed = count_speed + 1
+  end
+  avarage_bid.asks = avarage_bid.asks / count_speed
+  avarage_bid.bids = avarage_bid.bids / count_speed
+
+--  if newCangde then
+--    PrintDbgStr(inspect(
+--      maxVol
+--    ))
+--  end
+
+  label_params.R=255
+  label_params.G=0
+  label_params.B=0
+  label_params.DATE = os.date("%Y%m%d")
+  label_params.TIME = os.date("%H%M%S")
+  label_params.YVALUE = 0 - bids_count[indexTime].bids - 7000
+  label_params.TEXT = tostring(avarage_bid.bids) .. " t/s"
+  label_params.ALIGNMENT="BOTTOM"
+  SetLabelParams(Settings.char_tag, labelBidSpeed, label_params)
+
+  label_params.R=116
+  label_params.G=185
+  label_params.B=116
+  label_params.YVALUE = bids_count[indexTime].asks + 7000
+  label_params.TEXT = tostring(avarage_bid.asks) .. " t/s"
+  label_params.ALIGNMENT="TOP"
+  SetLabelParams(Settings.char_tag, labelAskSpeed, label_params)
+
 --  if newCangde then
 --    PrintDbgStr("Ќова€ свеча 1");
---    PrintDbgStr(inspect(
---      label_Candle[index-1]
---    ))
 --    PrintDbgStr("cur "..currentIndex)
 --    PrintDbgStr(
 --      tostring(Size())
@@ -552,7 +639,7 @@ function OnCalculate(index)
     currentIndex = index
   end
 
-  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids
+  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, avarage_bid.asks, 0 - avarage_bid.bids
 end
 
 function OnTransReply(trans_reply)
