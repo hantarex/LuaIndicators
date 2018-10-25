@@ -215,6 +215,48 @@ function getSpeed()
   return speed
 end
 
+function getSpeedMean()
+  local temp={bid = {}, ask = {}, vol = {} }
+  local mean = {bid = 0, ask = 0, vol = 0}
+  now=os.time()
+  local speed = {bid = 0, ask = 0, vol = 0 }
+
+  for i=0,(speed_interval-1) do
+    local date = os.date("%Y%m%d%H%M%S",now-i)
+    if bids_count_speed[date] == nil then
+      bids_count_speed[date] = {bids = 0, asks = 0, vol = 0 }
+    end
+    table.insert( temp.bid, bids_count_speed[date].bids )
+    table.insert( temp.ask, bids_count_speed[date].asks )
+    table.insert( temp.vol, bids_count_speed[date].vol )
+  end
+
+  table.sort( temp.bid )
+  table.sort( temp.ask )
+  table.sort( temp.vol )
+
+  --    PrintDbgStr(inspect(
+  --        temp
+  --    ))
+
+  if math.fmod(#temp.bid,2) == 0 then
+    mean.bid = ( temp.bid[#temp.bid/2] + temp.bid[(#temp.bid/2)+1] ) / 2
+    mean.ask = ( temp.ask[#temp.ask/2] + temp.ask[(#temp.ask/2)+1] ) / 2
+    mean.vol = ( temp.vol[#temp.vol/2] + temp.vol[(#temp.vol/2)+1] ) / 2
+    return mean
+  else
+    -- return middle element
+    mean.bid = temp.bid[math.ceil(#temp.bid/2)]
+    mean.ask = temp.ask[math.ceil(#temp.ask/2)]
+    mean.vol = temp.vol[math.ceil(#temp.vol/2)]
+    return mean
+  end
+  --  PrintDbgStr(inspect(
+  --    speed
+  --  ))
+  return mean
+end
+
 function copy(obj, seen)
   if type(obj) ~= 'table' then return obj end
   if seen and seen[obj] then return seen[obj] end
@@ -340,7 +382,7 @@ function fn(t)
     bids_count_speed[dateIndexSpeed].vol = bids_count_speed[dateIndexSpeed].vol + t.qty
 
     listTradeNum[t.trade_num] = true
-    speed = getSpeed()
+    speed = getSpeedMean()
     WriteLog(logfile, t.trade_num..";"..t.flags..";" ..t.price..";" ..t.qty..";" ..t.value..";" ..t.accruedint..";" ..t.yield..";" ..t.settlecode..";" ..t.reporate..";" ..t.repovalue..";" ..t.repo2value..";" ..t.repoterm..";" ..t.sec_code..";" ..t.class_code..";" ..dateIndex..";" ..t.period..";" ..t.open_interest..";" ..t.exchange_code..";" ..t.exec_market..";")
     return true
   else
@@ -603,6 +645,7 @@ function OnCalculate(index)
   avarage_bid.asks = avarage_bid.asks / count_speed
   avarage_bid.bids = avarage_bid.bids / count_speed
 
+  avarage_bid_mean = getSpeedMean()
 --  if newCangde then
 --    PrintDbgStr(inspect(
 --      maxVol
@@ -615,7 +658,7 @@ function OnCalculate(index)
   label_params.DATE = os.date("%Y%m%d")
   label_params.TIME = os.date("%H%M%S")
   label_params.YVALUE = 0 - bids_count[indexTime].bids - 7000
-  label_params.TEXT = tostring(avarage_bid.bids) .. " t/s"
+  label_params.TEXT = tostring(avarage_bid_mean.bids) .. " t/s"
   label_params.ALIGNMENT="BOTTOM"
   SetLabelParams(Settings.char_tag, labelBidSpeed, label_params)
 
@@ -623,7 +666,7 @@ function OnCalculate(index)
   label_params.G=185
   label_params.B=116
   label_params.YVALUE = bids_count[indexTime].asks + 7000
-  label_params.TEXT = tostring(avarage_bid.asks) .. " t/s"
+  label_params.TEXT = tostring(avarage_bid_mean.asks) .. " t/s"
   label_params.ALIGNMENT="TOP"
   SetLabelParams(Settings.char_tag, labelAskSpeed, label_params)
 

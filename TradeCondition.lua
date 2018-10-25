@@ -155,7 +155,11 @@ function TradeCondition:getDSInfo()
 end
 
 function TradeCondition:getNeedBestProfit()
-    return self.needBestProfit
+    if self:getPositionPrice() == nil then
+        return nil
+    end
+    local need = self:round(tonumber(self:getPositionPrice()) / 100, 2) * self.needBestProfit
+    return need
 end
 
 function TradeCondition:getIsTraiding()
@@ -203,6 +207,16 @@ end
 
 function TradeCondition:getStopOrder()
     return self:round(tonumber(self:getPositionPrice()) / 100 * (self.stopOrder + self:getFees()) , 2)
+end
+
+function TradeCondition:getStopOrderAbs()
+    abs = self:round(tonumber(self:getPositionPrice()) / 100 * (self.stopOrder + self:getFees()) , 2)
+
+    if self:isShort() then
+        return tonumber(self:getPositionPrice()) + abs
+    else
+        return tonumber(self:getPositionPrice()) - abs
+    end
 end
 
 function TradeCondition:getO()
@@ -306,11 +320,11 @@ function TradeCondition:closePosition(price)
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
     self:setIsClose(1)
---    if self:isShort() then
---        self:goBuy(price)
---    elseif self:isLong() then
---        self:goSell(price)
---    end
+    if self:isShort() then
+        self:goBuy(price)
+    elseif self:isLong() then
+        self:goSell(price)
+    end
     self:setIsClose(0)
     return false
 end
@@ -346,7 +360,7 @@ function TradeCondition:checkStop()
     --            return false
     --        end
     --    end
-    PrintDbgStr("Стоп? " .. (0 - self:getProfit()) .." ".. self:getStopOrder())
+    PrintDbgStr("Стоп? " .. (0 - self:getProfit()) .." ".. self:getStopOrder() .. " " .. self:getStopOrderAbs())
 
     if (0 - self:getProfit()) > self:getStopOrder() then
         return true
@@ -358,7 +372,7 @@ end
 function TradeCondition:goBuy(price)
     PrintDbgStr("Покупка!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
-    if self:getColorCandle() ~= 1 then -- цена идёт вниз по свече
+    if self:getColorCandle() ~= 1 and self:getPositionPrice() ~= nil then -- цена идёт вниз по свече
         PrintDbgStr("Цена идёт вниз по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
         if (self:getBidSpeed() * 1.3) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
             PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
@@ -377,7 +391,9 @@ function TradeCondition:goBuy(price)
         self:setLastDealMark(true);
     end
 
+    PrintDbgStr("Проверка позиции!\n");
     if self:getPosition() == 0 and (self:getBidSpeed() * 1.2) < self:getAskSpeed() then
+        PrintDbgStr("Без позиции!\n");
         self:setPositionPrice(price)
         self:setPosition(1)
         self:setSpeedTrade(self:getSpeedTrade() / self:getSpeedKoef())
@@ -386,6 +402,7 @@ function TradeCondition:goBuy(price)
         end
         self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. "\n");
     elseif self:getPosition() == -1 then
+        PrintDbgStr("В позиции!\n");
         self:setPosition(0)
         self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
         if self:getIsTraiding() then
@@ -400,6 +417,9 @@ end
 
 function TradeCondition:transactionSell()
     self.transactionMarket["OPERATION"]  = "S"
+    PrintDbgStr(inspect(
+        self.transactionMarket
+    ))
     local res = sendTransaction(self.transactionMarket)
     self:iterateTransaction()
     if res ~= "" then
@@ -411,6 +431,9 @@ end
 
 function TradeCondition:transactionBuy()
     self.transactionMarket["OPERATION"]  = "B"
+    PrintDbgStr(inspect(
+        self.transactionMarket
+    ))
     local res = sendTransaction(self.transactionMarket)
     self:iterateTransaction()
     if res ~= "" then
@@ -423,7 +446,7 @@ end
 function TradeCondition:goSell(price)
     PrintDbgStr("Продажа!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
-    if(self:getColorCandle() ~= -1) then -- цена идёт вверх по свече
+    if self:getColorCandle() ~= -1 and self:getPositionPrice() ~= nil then -- цена идёт вверх по свече
         PrintDbgStr("Цена идёт вверх по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
         if self:getBidSpeed() > (self:getAskSpeed() * 1.3)
                 and self:getProfit() > self:getNeedBestProfit() then
