@@ -124,7 +124,8 @@ function cb( index )
     if(label_Candle[index] == nil) then
         label_Candle[index] = {ask = 0, bid=0}
     end
-    local speed_meen = getSpeedMean()
+    myTrade:setBids(bids_count_speed)
+    local speed_meen =  myTrade:getSpeedMean(speed_interval)
     --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
     askSpeed = round(speed_meen.ask,2)
 
@@ -217,48 +218,6 @@ function getSpeed()
     --    speed
     --  ))
     return speed
-end
-
-function getSpeedMean()
-    local temp={bid = {}, ask = {}, vol = {} }
-    local mean = {bid = 0, ask = 0, vol = 0}
-    now=os.time()
-    local speed = {bid = 0, ask = 0, vol = 0 }
-
-    for i=0,(speed_interval-1) do
-        local date = os.date("%Y%m%d%H%M%S",now-i)
-        if bids_count_speed[date] == nil then
-            bids_count_speed[date] = {bids = 0, asks = 0, vol = 0 }
-        end
-        table.insert( temp.bid, bids_count_speed[date].bids )
-        table.insert( temp.ask, bids_count_speed[date].asks )
-        table.insert( temp.vol, bids_count_speed[date].vol )
-    end
-
-    table.sort( temp.bid )
-    table.sort( temp.ask )
-    table.sort( temp.vol )
-
---    PrintDbgStr(inspect(
---        temp
---    ))
-
-    if math.fmod(#temp.bid,2) == 0 then
-        mean.bid = ( temp.bid[#temp.bid/2] + temp.bid[(#temp.bid/2)+1] ) / 2
-        mean.ask = ( temp.ask[#temp.ask/2] + temp.ask[(#temp.ask/2)+1] ) / 2
-        mean.vol = ( temp.vol[#temp.vol/2] + temp.vol[(#temp.vol/2)+1] ) / 2
-        return mean
-    else
-        -- return middle element
-        mean.bid = temp.bid[math.ceil(#temp.bid/2)]
-        mean.ask = temp.ask[math.ceil(#temp.ask/2)]
-        mean.vol = temp.vol[math.ceil(#temp.vol/2)]
-        return mean
-    end
-    --  PrintDbgStr(inspect(
-    --    speed
-    --  ))
-    return mean
 end
 
 function WriteLog(logfile, text)
