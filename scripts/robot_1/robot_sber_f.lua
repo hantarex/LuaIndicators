@@ -126,6 +126,15 @@ function cb( index )
     end
     myTrade:setBids(bids_count_speed)
     local speed_meen =  myTrade:getSpeedMean(speed_interval)
+
+    PrintDbgStr(inspect(
+        myTrade:getSpeedMean(30)
+    ))
+
+    PrintDbgStr(inspect(
+        myTrade:getSpeedMean(speed_interval)
+    ))
+
     --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
     askSpeed = round(speed_meen.ask,2)
 
@@ -136,8 +145,8 @@ function cb( index )
 
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
-    if bidSpeed > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,-1) end
-    if askSpeed > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,1) end
+    if bidSpeed > myTrade:getSpeedTrade() and round(myTrade:getSpeedMean(30).bid,2) > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,-1) end
+    if askSpeed > myTrade:getSpeedTrade() and round(myTrade:getSpeedMean(30).ask,2) > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,1) end
 end
 
 function serialSec(t)
@@ -157,9 +166,9 @@ function WriteLogDeal(logfile, deal)
 
     PrintDbgStr("debug")
 
-    PrintDbgStr(inspect(
-        getSpeedMean()
-    ))
+--    PrintDbgStr(inspect(
+--        getSpeedMean()
+--    ))
 
 
     if myTrade:isSpeedUp() then -- Растёт
