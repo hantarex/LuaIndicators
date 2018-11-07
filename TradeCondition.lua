@@ -39,7 +39,8 @@ function TradeCondition:create(options)
         isIndex = false,
         O,
         C,
-        numTraiding = 1
+        numTraiding = 1,
+        rev = false
     }
     if options.fees ~= nil then
         init.fees = options.fees
@@ -413,6 +414,13 @@ end
 
 function TradeCondition:checkPause()
     PrintDbgStr("Проверка паузы!\n");
+    if self.rev == true then
+        PrintDbgStr("REV!");
+        PrintDbgStr(inspect(
+            self.rev
+        ))
+        return true
+    end
     return os.time(os.date("!*t")) - self.timePause > self.pause
 end
 
@@ -534,12 +542,48 @@ function TradeCondition:setCurrentBid(bid)
     self.bid = bid
 end
 
+function TradeCondition:getCurrentBid()
+    return self.bid
+end
+
 function TradeCondition:getAskSpeed()
     return self.askSpeed
 end
 
 function TradeCondition:getBidSpeed()
     return self.bidSpeed
+end
+
+function TradeCondition:checkRev()
+    PrintDbgStr("Reward?")
+    PrintDbgStr(inspect(
+        {(round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1,2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1,2)) , (round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1,2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1,2))}
+    ))
+    if self:isShort() then
+        if (round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1, 2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1, 2)) > 20 then
+            return true
+        end
+    end
+    if self:isLong() then
+        if (round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1, 2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1, 2)) > 20 then
+            return true
+        end
+    end
+    return false
+end
+
+function TradeCondition:goRev()
+    print("Go Rev!!!")
+    self.rev = true
+    if self:isShort() then
+        self:closePosition(self:getCurrentBid().param_value)
+        self:goBuy(self:getCurrentBid().param_value)
+    end
+    if self:isLong() then
+        self:closePosition(self:getCurrentBid().param_value)
+        self:goSell(self:getCurrentBid().param_value)
+    end
+    self.rev = false
 end
 
 function TradeCondition:getNeedProfit()

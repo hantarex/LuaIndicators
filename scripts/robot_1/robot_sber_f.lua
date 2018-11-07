@@ -128,11 +128,10 @@ function cb( index )
     local speed_meen =  myTrade:getSpeedMean(speed_interval)
 
     PrintDbgStr(inspect(
-        myTrade:getSpeedMean(30)
-    ))
-
-    PrintDbgStr(inspect(
-        myTrade:getSpeedMean(speed_interval)
+        {
+            myTrade:getSpeedMean(speed_interval),
+            myTrade:getSpeedMean(20)
+        }
     ))
 
     --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
@@ -145,8 +144,20 @@ function cb( index )
 
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
-    if bidSpeed > myTrade:getSpeedTrade() and round(myTrade:getSpeedMean(30).bid,2) > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,-1) end
-    if askSpeed > myTrade:getSpeedTrade() and round(myTrade:getSpeedMean(30).ask,2) > myTrade:getSpeedTrade() and index == ds:Size() then WriteLogDeal(logDeal,1) end
+    if bidSpeed > myTrade:getSpeedTrade() and
+            round(myTrade:getSpeedMean(20).bid,2) > (myTrade:getSpeedTrade() / 2) and
+            bidSpeed > askSpeed and
+            round(myTrade:getSpeedMean(20).bid,2) > round(myTrade:getSpeedMean(20).ask,2) and
+            index == ds:Size() then
+        WriteLogDeal(logDeal,-1)
+    end
+    if askSpeed > myTrade:getSpeedTrade() and
+            round(myTrade:getSpeedMean(20).ask,2) > (myTrade:getSpeedTrade() / 2) and
+            askSpeed > bidSpeed and
+            round(myTrade:getSpeedMean(20).ask,2) > round(myTrade:getSpeedMean(20).bid,2) and
+            index == ds:Size() then
+        WriteLogDeal(logDeal,1)
+    end
 end
 
 function serialSec(t)
@@ -181,6 +192,8 @@ function WriteLogDeal(logfile, deal)
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
                 myTrade:closePosition(t.param_value)
+            elseif myTrade:checkRev() then
+                myTrade:goRev()
             end
         elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
             PrintDbgStr("¬ход в LONG")
@@ -195,6 +208,8 @@ function WriteLogDeal(logfile, deal)
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
                 myTrade:closePosition(t.param_value)
+            elseif myTrade:checkRev() then
+                myTrade:goRev()
             end
         elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
             PrintDbgStr("¬ход в SHORT")
