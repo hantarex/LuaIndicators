@@ -26,9 +26,10 @@ function TradeCondition:create(options)
         pause = 5, -- set Interval after close position
         transactionPrefix = os.time(os.date("!*t")),
         transactionPostfix = 1,
-        isTraiding = false,
+        isTraiding = false, -- is traiding
         logfile = nil,
-        speed_interval = 10,
+        speed_interval = 10, -- first interval for condition
+        speed_two_interval = 20, -- two interval for condition
         askSpeed = 0,
         isClose = 0,
         closeToMinus = false,
@@ -48,6 +49,10 @@ function TradeCondition:create(options)
 
     if options.speed_interval ~= nil then
         init.speed_interval = options.speed_interval
+    end
+
+    if options.speed_two_interval ~= nil then
+        init.speed_two_interval = options.speed_two_interval
     end
 
     if options.pause ~= nil then
@@ -113,6 +118,10 @@ end
 
 function TradeCondition:getSpeedTrade()
     return self.speed
+end
+
+function TradeCondition:getSpeedTwoInterval()
+    return self.speed_two_interval
 end
 
 function TradeCondition:getSpeedInterval()
@@ -339,6 +348,7 @@ end
 
 function TradeCondition:setLastDealMark(success)
     if success == false then
+        PrintDbgStr("Добавление множителя!")
         self.badDeal = self.badDeal + 1
     else
         self.badDeal = 0
@@ -354,11 +364,13 @@ function TradeCondition:closePosition(price)
     PrintDbgStr("Закрытие позиции!")
 --    self:getDebug(self:getProfit())
     if self:getProfit() < self:getNeedProfit()
-            and ((self:getColorCandle() ~= 1 and self:isLong()) or (self:getColorCandle() ~= -1 and self:isShort()))
+            and ((self:getColorCandle() ~= 1 and self:isLong()) or (self:getColorCandle() ~= -1 and self:isShort())) and
+            self:checkPause()
     then
 --        self.logfile:write(dateDeal..";Закрытие в минус\n");
+        PrintDbgStr("Закрытие в минус")
         self:setCloseToMinus(true)
-    else
+    elseif self:checkPause() then
         self:setCloseToMinus(false)
     end
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
@@ -455,7 +467,7 @@ function TradeCondition:goBuy(price)
         if self:getIsTraiding() then
             self:transactionBuy()
         end
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(30)) .."\n");
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .."\n");
     elseif self:getPosition() == -1 then
         PrintDbgStr("В позиции!\n");
         self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
@@ -463,7 +475,7 @@ function TradeCondition:goBuy(price)
             self:transactionBuy()
         end
         self:updateTimePause()
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(30)) .."\n");
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .."\n");
         self:setPosition(0)
         self:setPositionPrice(nil)
     end
@@ -522,7 +534,7 @@ function TradeCondition:goSell(price)
         if self:getIsTraiding() then
             self:transactionSell()
         end
-        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(30)) .."\n");
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .."\n");
 
     elseif self:getPosition() == 1 then
         self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
@@ -530,7 +542,7 @@ function TradeCondition:goSell(price)
             self:transactionSell()
         end
         self:updateTimePause()
-        self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(30)) .."\n");
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .."\n");
         self:setPosition(0)
         self:setPositionPrice(nil)
     end

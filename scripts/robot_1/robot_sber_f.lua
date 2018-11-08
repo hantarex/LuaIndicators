@@ -130,7 +130,7 @@ function cb( index )
     PrintDbgStr(inspect(
         {
             myTrade:getSpeedMean(speed_interval),
-            myTrade:getSpeedMean(20)
+            myTrade:getSpeedMean(myTrade:getSpeedTwoInterval())
         }
     ))
 
@@ -144,17 +144,18 @@ function cb( index )
 
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
+    PrintDbgStr(tostring(myTrade:getSpeedTrade() / 2))
     if bidSpeed > myTrade:getSpeedTrade() and
-            round(myTrade:getSpeedMean(20).bid,2) > (myTrade:getSpeedTrade() / 2) and
+            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) > (myTrade:getSpeedTrade() / 2) and
             bidSpeed > askSpeed and
-            round(myTrade:getSpeedMean(20).bid,2) > round(myTrade:getSpeedMean(20).ask,2) and
+            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) > round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) and
             index == ds:Size() then
         WriteLogDeal(logDeal,-1)
     end
     if askSpeed > myTrade:getSpeedTrade() and
-            round(myTrade:getSpeedMean(20).ask,2) > (myTrade:getSpeedTrade() / 2) and
+            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) > (myTrade:getSpeedTrade() / 2) and
             askSpeed > bidSpeed and
-            round(myTrade:getSpeedMean(20).ask,2) > round(myTrade:getSpeedMean(20).bid,2) and
+            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) > round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) and
             index == ds:Size() then
         WriteLogDeal(logDeal,1)
     end
