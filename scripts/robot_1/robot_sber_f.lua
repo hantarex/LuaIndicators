@@ -131,7 +131,8 @@ function cb( index )
     PrintDbgStr(inspect(
         {
             myTrade:getSpeedMean(speed_interval),
-            myTrade:getSpeedMean(myTrade:getSpeedTwoInterval())
+            myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()),
+            myTrade:getSpeedMean(50)
         }
     ))
 
