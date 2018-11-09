@@ -605,17 +605,19 @@ function TradeCondition:checkAsk()
 end
 
 function TradeCondition:checkRev()
+    local ask = self:getSpeedMean(self:getSpeedTwoInterval()).ask < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).ask
+    local bid = self:getSpeedMean(self:getSpeedTwoInterval()).bid < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).bid
     PrintDbgStr("Reward?")
     PrintDbgStr(inspect(
-        {(round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1,2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2)) , (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1,2))}
+        {(round(ask,2) / round(bid,2)) , (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2) / round(ask,2))}
     ))
     if self:isShort() then
-        if (round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1, 2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1, 2)) > self:getRevMult() and self:checkAsk() then
+        if (round(ask, 2) / round(bid, 2)) > self:getRevMult() and self:checkAsk() then
             return true
         end
     end
     if self:isLong() then
-        if (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1, 2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1, 2)) > self:getRevMult() and self:checkBid() then
+        if (round(bid, 2) / round(ask, 2)) > self:getRevMult() and self:checkBid() then
             return true
         end
     end
