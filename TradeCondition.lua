@@ -23,6 +23,7 @@ function TradeCondition:create(options)
         DSInfo = nil,
         position = 0,
         bids = 0,
+        ds = nil,
         pause = 5, -- set Interval after close position
         transactionPrefix = os.time(os.date("!*t")),
         transactionPostfix = 1,
@@ -30,6 +31,7 @@ function TradeCondition:create(options)
         logfile = nil,
         speed_interval = 10, -- first interval for condition
         speed_two_interval = 20, -- two interval for condition
+        rev_mult = 20, -- delimiter speed for rev
         askSpeed = 0,
         isClose = 0,
         closeToMinus = false,
@@ -49,6 +51,10 @@ function TradeCondition:create(options)
 
     if options.speed_interval ~= nil then
         init.speed_interval = options.speed_interval
+    end
+
+    if options.rev_mult ~= nil then
+        init.rev_mult = options.rev_mult
     end
 
     if options.speed_two_interval ~= nil then
@@ -120,6 +126,10 @@ function TradeCondition:getSpeedTrade()
     return self.speed
 end
 
+function TradeCondition:getRevMult()
+    return self.rev_mult
+end
+
 function TradeCondition:getSpeedTwoInterval()
     return self.speed_two_interval
 end
@@ -138,6 +148,14 @@ end
 
 function TradeCondition:setBids(bids)
     self.bids = bids
+end
+
+function TradeCondition:setDs(ds)
+    self.ds = ds
+end
+
+function TradeCondition:getDs()
+    return self.ds
 end
 
 function TradeCondition:getBids()
@@ -566,18 +584,38 @@ function TradeCondition:getBidSpeed()
     return self.bidSpeed
 end
 
+function TradeCondition:checkBid()
+    if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > self:getSpeedTrade() and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > (self:getSpeedTrade() / 2) and
+            round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedInterval()).ask,2) and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) then
+        return true
+    end
+    return false
+end
+
+function TradeCondition:checkAsk()
+    if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > self:getSpeedTrade() and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > (self:getSpeedTrade() / 2) and
+            round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedInterval()).bid,2) and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) then
+        return true
+    end
+    return false
+end
+
 function TradeCondition:checkRev()
     PrintDbgStr("Reward?")
     PrintDbgStr(inspect(
-        {(round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1,2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1,2)) , (round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1,2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1,2))}
+        {(round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1,2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2)) , (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1,2))}
     ))
     if self:isShort() then
-        if (round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1, 2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1, 2)) > 20 then
+        if (round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1, 2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1, 2)) > self:getRevMult() and self:checkAsk() then
             return true
         end
     end
     if self:isLong() then
-        if (round(self:getSpeedMean(self:getSpeedInterval() * 2).bid + 1, 2) / round(self:getSpeedMean(self:getSpeedInterval() * 2).ask + 1, 2)) > 20 then
+        if (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1, 2) / round(self:getSpeedMean(self:getSpeedTwoInterval()).ask + 1, 2)) > self:getRevMult() and self:checkBid() then
             return true
         end
     end

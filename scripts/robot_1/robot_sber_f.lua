@@ -125,6 +125,7 @@ function cb( index )
         label_Candle[index] = {ask = 0, bid=0}
     end
     myTrade:setBids(bids_count_speed)
+    myTrade:setDs(ds)
     local speed_meen =  myTrade:getSpeedMean(speed_interval)
 
     PrintDbgStr(inspect(
@@ -145,18 +146,10 @@ function cb( index )
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
     PrintDbgStr(tostring(myTrade:getSpeedTrade() / 2))
-    if bidSpeed > myTrade:getSpeedTrade() and
-            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) > (myTrade:getSpeedTrade() / 2) and
-            bidSpeed > askSpeed and
-            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) > round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) and
-            index == ds:Size() then
+    if myTrade:checkBid() and index == ds:Size() then
         WriteLogDeal(logDeal,-1)
     end
-    if askSpeed > myTrade:getSpeedTrade() and
-            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) > (myTrade:getSpeedTrade() / 2) and
-            askSpeed > bidSpeed and
-            round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).ask,2) > round(myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()).bid,2) and
-            index == ds:Size() then
+    if myTrade:checkAsk() and index == ds:Size() then
         WriteLogDeal(logDeal,1)
     end
 end
