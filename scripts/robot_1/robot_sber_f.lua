@@ -132,7 +132,7 @@ function cb( index )
         {
             myTrade:getSpeedMean(speed_interval),
             myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()),
-            myTrade:getSpeedMean(50)
+            myTrade:getSpeedMean(myTrade:getSpeedThreeInterval())
         }
     ))
 
@@ -186,7 +186,11 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                myTrade:closePosition(t.param_value)
+                if myTrade:checkAsk() then
+                    myTrade:goRev()
+                else
+                    myTrade:closePosition(t.param_value)
+                end
             elseif myTrade:checkRev() then
                 myTrade:goRev()
             end
@@ -202,7 +206,11 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из лонга
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                myTrade:closePosition(t.param_value)
+                if myTrade:checkBid() then
+                    myTrade:goRev()
+                else
+                    myTrade:closePosition(t.param_value)
+                end
             elseif myTrade:checkRev() then
                 myTrade:goRev()
             end
