@@ -593,9 +593,12 @@ function TradeCondition:getBidSpeed()
     return self.bidSpeed
 end
 
-function TradeCondition:checkBid()
-    if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > self:getSpeedTrade() and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > (self:getSpeedTrade() / 2) and
+function TradeCondition:checkBid(speedKoef)
+    if speedKoef == nil then
+        speedKoef =1
+    end
+    if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > (self:getSpeedTrade()*speedKoef) and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
             round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedInterval()).ask,2) and
             round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) and
             round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) then
@@ -604,9 +607,12 @@ function TradeCondition:checkBid()
     return false
 end
 
-function TradeCondition:checkAsk()
-    if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > self:getSpeedTrade() and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > (self:getSpeedTrade() / 2) and
+function TradeCondition:checkAsk(speedKoef)
+    if speedKoef == nil then
+        speedKoef =1
+    end
+    if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > (self:getSpeedTrade()*speedKoef) and
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
             round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedInterval()).bid,2) and
             round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) and
             round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) then

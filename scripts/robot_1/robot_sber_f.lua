@@ -186,7 +186,7 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                if myTrade:checkAsk() then
+                if myTrade:checkAsk(myTrade:getSpeedKoef()) then
                     myTrade:goRev()
                 else
                     myTrade:closePosition(t.param_value)
@@ -206,7 +206,7 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из лонга
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                if myTrade:checkBid() then
+                if myTrade:checkBid(myTrade:getSpeedKoef()) then
                     myTrade:goRev()
                 else
                     myTrade:closePosition(t.param_value)
