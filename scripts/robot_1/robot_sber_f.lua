@@ -133,10 +133,10 @@ function cb( index )
     PrintDbgStr(inspect(
         {
             myTrade:getSpeedMean(speed_interval),
-            myTrade:getSpeedMean(myTrade:getSpeedTwoInterval()),
-            myTrade:getSpeedMean(myTrade:getSpeedThreeInterval()),
-            myTrade:getSpeedMean(300),
-            myTrade:getMedian(myTrade:getMeanList(), 30),
+            signal1 = myTrade:checkSignal1(),
+            signal2 = myTrade:checkSignal2(),
+            signal3 = myTrade:checkSignal3(),
+            myTrade:getMedian(myTrade:getMeanList(), 10),
             myTrade:getLastDealMark()
         }
     ))
