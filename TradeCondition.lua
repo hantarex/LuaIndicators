@@ -483,7 +483,7 @@ function TradeCondition:goBuy(price)
         end
     end
 
-    if self:getCloseToMinus() == true then
+    if self:getCloseToMinus() == true and self:getPosition() ~= 0 then
         self:setLastDealMark(false);
     else
         self:setLastDealMark(true);
@@ -559,6 +559,13 @@ function TradeCondition:goSell(price)
             return false
         end
     end
+
+    if self:getCloseToMinus() == true and self:getPosition() ~= 0 then
+        self:setLastDealMark(false);
+    else
+        self:setLastDealMark(true);
+    end
+
     if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.5) and self:checkPause() then
         self:setPositionPrice(price)
         self:setPosition(-1)
@@ -609,9 +616,9 @@ function TradeCondition:checkBid(speedKoef, rev)
     if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > (self:getSpeedTrade()*speedKoef) and
             round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
             round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedInterval()).ask,2) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) and
-            round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) or
-            (rev == false and self:checkPosition() and round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2) then
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) or
+--            round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) or
+            (rev == false and self:checkPosition() ~= false and round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
         return true
     end
     return false
@@ -628,9 +635,9 @@ function TradeCondition:checkAsk(speedKoef, rev)
     if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > (self:getSpeedTrade()*speedKoef) and
             round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
             round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedInterval()).bid,2) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) and
-            round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) or
-            (rev == false and self:checkPosition() and round(mean.ask + 1,2) > round(mean.bid + 1,2) > 2) then
+            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) or
+--            round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) or
+            (rev == false and self:checkPosition() ~= false and round(mean.ask + 1,2) > round(mean.bid + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
         return true
     end
     return false
