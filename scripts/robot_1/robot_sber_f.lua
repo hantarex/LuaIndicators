@@ -129,17 +129,7 @@ function cb( index )
     local speed_meen =  myTrade:getSpeedMean(speed_interval)
 
     myTrade:appendToMeanList(speed_meen)
-
-    PrintDbgStr(inspect(
-        {
-            myTrade:getSpeedMean(speed_interval),
-            signal1 = myTrade:checkSignal1(),
-            signal2 = myTrade:checkSignal2(),
-            signal3 = myTrade:checkSignal3(),
-            myTrade:getMedian(myTrade:getMeanList(), 10),
-            myTrade:getLastDealMark()
-        }
-    ))
+    myTrade:appendCandleDiff()
 
     --  return bids_count[indexTime].asks, 0 - bids_count[indexTime].bids, bids_count[indexTime].vol
     askSpeed = round(speed_meen.ask,2)
@@ -152,6 +142,18 @@ function cb( index )
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
     PrintDbgStr(tostring(myTrade:getSpeedTrade() / 2))
+    PrintDbgStr(inspect(
+        {
+            price = ds:C(index),
+            myTrade:getSpeedMean(speed_interval),
+            signal1 = myTrade:checkSignal1(),
+            signal3 = myTrade:checkSignal3(),
+            signal4 = myTrade:checkSignal4(),
+            signal5 = myTrade:checkSignal5(),
+            signal6 = myTrade:checkSignal6(),
+            signal_sum = myTrade:signalSum(),
+        }
+    ))
     if myTrade:checkBid() and index == ds:Size() then
         WriteLogDeal(logDeal,-1)
     end
@@ -191,13 +193,13 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                if myTrade:checkAsk(myTrade:getSpeedKoef(), true) then
-                    myTrade:goRev()
-                else
+--                if myTrade:checkAsk(myTrade:getSpeedKoef(), true) then
+--                    myTrade:goRev()
+--                else
                     myTrade:closePosition(t.param_value)
-                end
-            elseif myTrade:checkRev() then
-                myTrade:goRev()
+--                end
+--            elseif myTrade:checkRev() then
+--                myTrade:goRev()
             end
         elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
             PrintDbgStr("Вход в LONG")
@@ -211,13 +213,13 @@ function WriteLogDeal(logfile, deal)
             if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из лонга
                 myTrade:closePosition(t.param_value)
             elseif myTrade:checkStop() then
-                if myTrade:checkBid(myTrade:getSpeedKoef(), true) then
-                    myTrade:goRev()
-                else
+--                if myTrade:checkBid(myTrade:getSpeedKoef(), true) then
+--                    myTrade:goRev()
+--                else
                     myTrade:closePosition(t.param_value)
-                end
-            elseif myTrade:checkRev() then
-                myTrade:goRev()
+--                end
+--            elseif myTrade:checkRev() then
+--                myTrade:goRev()
             end
         elseif myTrade:checkPosition() == false then -- если без позиции тогда заходим в лонг
             PrintDbgStr("Вход в SHORT")
@@ -298,6 +300,11 @@ function main()
         class_code= config.CLASS_CODE,
         sec_code= config.SEC_CODE,
     })
+--    PrintDbgStr(inspect(
+--        {
+--            test3 = myTrade:tableMean2({-1,-1,-1,-1,-1,5,5,5}),
+--        }
+--    ))
     ds = CreateDataSource(config.CLASS_CODE, config.SEC_CODE, INTERVAL_M5)
     ds: SetUpdateCallback (cb)
     PrintDbgStr(inspect(

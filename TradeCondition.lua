@@ -40,6 +40,7 @@ function TradeCondition:create(options)
         meanList = {bid = {}, ask = {}, vol = {}},
         bidSpeed =0,
         speedKoef = 7,
+        candleDiff = {},
         timePause = os.time(os.date("!*t")),
         isIndex = false,
         O,
@@ -136,10 +137,38 @@ function TradeCondition:getMeanList()
     return self.meanList
 end
 
+function TradeCondition:getCandleDiff()
+    return self.candleDiff
+end
+
 function TradeCondition:appendToMeanList(val)
     table.sinsert(self:getMeanList().ask, val.ask)
     table.sinsert(self:getMeanList().bid, val.bid)
     table.sinsert(self:getMeanList().vol, val.vol)
+end
+
+function TradeCondition:appendCandleDiff()
+    if #self:getCandleDiff() == 0 then
+        table.sinsert(self:getCandleDiff(), 0)
+    else
+        local diff = self:getDs():C(self:getCandleIndex()) - self.lastPriceCandle
+        table.sinsert(self:getCandleDiff(), diff)
+    end
+--    PrintDbgStr(inspect(
+--        {
+--            self.lastPriceCandle,
+--            self:getDs():C(self:getCandleIndex())
+--        }
+--    ))
+    self.lastPriceCandle = self:getDs():C(self:getCandleIndex())
+end
+
+function TradeCondition:getLastCandleDiff()
+    if #self:getCandleDiff() == 0 then
+        return 0
+    else
+        return self:getCandleDiff()[#self:getCandleDiff()]
+    end
 end
 
 function TradeCondition:getRevMult()
@@ -431,6 +460,48 @@ function TradeCondition:checkSignal3()
     return t
 end
 
+function TradeCondition:checkSignal4()
+    local candleDiff = self:getCandleDiff()
+    return self:getMedianSimple(candleDiff, 10)
+end
+
+function TradeCondition:checkSignal5()
+    local tbl = self:tableMean2(self:tableMean(self:getSortMedian(self:getCandleDiff(), 9)))
+    local zeros = 0
+
+    for key,value in pairs(tbl) do
+        if value == 0 then zeros = zeros + 1 end
+    end
+    zeros = math.floor(zeros / 2)
+    local key_zero = self:stats_search(tbl, 0)
+    if key_zero == false then return false end
+    local center = key_zero + zeros
+    if center / (#tbl/2) > 1 then
+        return math.abs((#tbl/2) - center)
+    else
+        return 0 - math.abs((#tbl/2) - center)
+    end
+end
+
+function TradeCondition:checkSignal6()
+    local sign = self:checkSignal1()
+    local x
+    PrintDbgStr(inspect(
+        self:getSpeedTrade()
+    ))
+    if sign.vol < self:getSpeedTrade() then
+        return 0
+    end
+    sign.ask = tonumber(sign.ask)
+    sign.bid = tonumber(sign.bid)
+    if sign.ask > sign.bid then
+        x = math.floor(sign.ask / sign.bid)
+    else
+        x = 0 - math.floor(sign.bid / sign.ask)
+    end
+    return round(3 * x / ( 2 + math.abs(x)),0)
+end
+
 function TradeCondition:checkSignal1()
     local t = {ask = 0, bid = 0, vol = 0}
     local myTable = {
@@ -502,27 +573,59 @@ function TradeCondition:closePosition(price)
     return false
 end
 
+--function TradeCondition:checkStop()
+--    if self:getPositionPrice() == nil or self:getCurrentPrice() == nil then
+--        return false
+--    end
+--
+----    PrintDbgStr(inspect(
+----        self:getCurrentPrice()
+----    ))
+----
+----    PrintDbgStr(inspect(
+----        self:getPositionPrice()
+----    ))
+--    local mean = self:getMedian(self:getMeanList(), 10);
+--    local stopMean = false
+--    if self:isShort() then
+--        if round(mean.ask + 1,2) / round(mean.bid + 1,2) > 2 then
+--            stopMean = true
+--        end
+--    end
+--    if self:isLong() then
+--        if round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2 then
+--            stopMean = true
+--        end
+--    end
+--    PrintDbgStr("Стоп? " .. (0 - self:getProfit()) .." ".. self:getStopOrder() .. " " .. self:getStopOrderAbs())
+--    if (0 - self:getProfit()) > self:getStopOrder() or stopMean
+--    then
+--        return true
+--    else
+--        return false
+--    end
+--end
+
 function TradeCondition:checkStop()
     if self:getPositionPrice() == nil or self:getCurrentPrice() == nil then
         return false
     end
 
---    PrintDbgStr(inspect(
---        self:getCurrentPrice()
---    ))
---
---    PrintDbgStr(inspect(
---        self:getPositionPrice()
---    ))
-    local mean = self:getMedian(self:getMeanList(), 10);
+    --    PrintDbgStr(inspect(
+    --        self:getCurrentPrice()
+    --    ))
+    --
+    --    PrintDbgStr(inspect(
+    --        self:getPositionPrice()
+    --    ))
     local stopMean = false
     if self:isShort() then
-        if round(mean.ask + 1,2) / round(mean.bid + 1,2) > 2 then
+        if self:signalSum() > 1 then
             stopMean = true
         end
     end
     if self:isLong() then
-        if round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2 then
+        if self:signalSum() < -1 then
             stopMean = true
         end
     end
@@ -550,18 +653,18 @@ end
 function TradeCondition:goBuy(price)
     PrintDbgStr("Покупка!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
-    if self:getColorCandle() ~= 1 and self:getPositionPrice() ~= nil then -- цена идёт вниз по свече
-        PrintDbgStr("Цена идёт вниз по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
-        if (self:getBidSpeed() * 1.5) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
-            PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
---        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
---            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
-        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() < self:getAskSpeed() then
-            PrintDbgStr("Закрытие в индексе!\n");
-        else
-            return false
-        end
-    end
+--    if self:getColorCandle() ~= 1 and self:getPositionPrice() ~= nil then -- цена идёт вниз по свече
+--        PrintDbgStr("Цена идёт вниз по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
+--        if (self:getBidSpeed() * 1.5) < self:getAskSpeed() and self:getProfit() > self:getNeedBestProfit() then
+--            PrintDbgStr("Скорость взлёта больше падения! И достигнут бестпрофит!\n");
+----        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
+----            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
+--        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() < self:getAskSpeed() then
+--            PrintDbgStr("Закрытие в индексе!\n");
+--        else
+--            return false
+--        end
+--    end
 
     if self:getCloseToMinus() == true and self:getPosition() ~= 0 then
         self:setLastDealMark(false);
@@ -570,7 +673,7 @@ function TradeCondition:goBuy(price)
     end
 
     PrintDbgStr("Проверка позиции!\n");
-    if self:getPosition() == 0 and (self:getBidSpeed() * 1.5) < self:getAskSpeed() and self:checkPause() then
+    if self:getPosition() == 0 and self:checkPause() then
         PrintDbgStr("Без позиции!\n");
         self:setPositionPrice(price)
         self:setPosition(1)
@@ -578,7 +681,7 @@ function TradeCondition:goBuy(price)
         if self:getIsTraiding() then
             self:transactionBuy()
         end
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedThreeInterval())) .. ";" .. inspect(self:checkSignal2()) .. ";" .. inspect(self:getMedian(self:getMeanList(), 10)).. "\n");
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:checkSignal1()) .. ";" .. inspect(self:checkSignal3()) .. ";" .. inspect(self:checkSignal4()).. ";" .. inspect(self:checkSignal5()).. ";" .. inspect(self:checkSignal6()).. "\n");
     elseif self:getPosition() == -1 then
         PrintDbgStr("В позиции!\n");
         self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
@@ -587,7 +690,7 @@ function TradeCondition:goBuy(price)
             self:transactionBuy()
         end
         self:updateTimePause()
-        self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedThreeInterval())) .. ";" .. inspect(self:checkSignal2()) .. ";" .. inspect(self:getMedian(self:getMeanList(), 10)).. "\n");
+        self.logfile:write(dateDeal..";Покупка;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:checkSignal1()) .. ";" .. inspect(self:checkSignal3()) .. ";" .. inspect(self:checkSignal4()).. ";" .. inspect(self:checkSignal5()).. ";" .. inspect(self:checkSignal6()).. "\n");
         self:setPosition(0)
         self:setPositionPrice(nil)
     end
@@ -626,19 +729,19 @@ end
 function TradeCondition:goSell(price)
     PrintDbgStr("Продажа!")
     local dateDeal = os.date("%d.%m.%Y %H:%M:%S");
-    if self:getColorCandle() ~= -1 and self:getPositionPrice() ~= nil then -- цена идёт вверх по свече
-        PrintDbgStr("Цена идёт вверх по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
-        if self:getBidSpeed() > (self:getAskSpeed() * 1.5)
-                and self:getProfit() > self:getNeedBestProfit() then
-            PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
---        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
---            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
-        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() > self:getAskSpeed() then
-            PrintDbgStr("Закрытие в индексе!\n");
-        else
-            return false
-        end
-    end
+--    if self:getColorCandle() ~= -1 and self:getPositionPrice() ~= nil then -- цена идёт вверх по свече
+--        PrintDbgStr("Цена идёт вверх по свече " .. (self:getNeedBestProfit() ~=nil and self:getNeedBestProfit() or "nil") .. "\n");
+--        if self:getBidSpeed() > (self:getAskSpeed() * 1.5)
+--                and self:getProfit() > self:getNeedBestProfit() then
+--            PrintDbgStr("Скорость падения больше взлёта! И достигнут бестпрофит!\n");
+----        elseif self:checkIndex() and self:getProfit() > self:getNeedBestProfit() then
+----            PrintDbgStr("Достигнут бестпрофит в индексе!\n");
+--        elseif self:checkIndex() and self:getIsClose() and self:getBidSpeed() > self:getAskSpeed() then
+--            PrintDbgStr("Закрытие в индексе!\n");
+--        else
+--            return false
+--        end
+--    end
 
     if self:getCloseToMinus() == true and self:getPosition() ~= 0 then
         self:setLastDealMark(false);
@@ -646,14 +749,14 @@ function TradeCondition:goSell(price)
         self:setLastDealMark(true);
     end
 
-    if self:getPosition() == 0 and self:getBidSpeed() > (self:getAskSpeed() * 1.5) and self:checkPause() then
+    if self:getPosition() == 0 and self:checkPause() then
         self:setPositionPrice(price)
         self:setPosition(-1)
         self:setSpeedTrade(self:getSpeedTrade() / self:getSpeedKoef())
         if self:getIsTraiding() then
             self:transactionSell()
         end
-        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedThreeInterval())) .. ";" .. inspect(self:checkSignal2()) .. ";" .. inspect(self:getMedian(self:getMeanList(), 10)) .."\n");
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getPositionPrice() ~= nil and self:getPositionPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:checkSignal1()) .. ";" .. inspect(self:checkSignal3()) .. ";" .. inspect(self:checkSignal4()).. ";" .. inspect(self:checkSignal5()).. ";" .. inspect(self:checkSignal6()) .."\n");
 
     elseif self:getPosition() == 1 then
         self:setSpeedTrade(self:getStartSpeedTrade() + self:getLastDealMark()*0.2*self:getStartSpeedTrade())
@@ -661,7 +764,7 @@ function TradeCondition:goSell(price)
             self:transactionSell()
         end
         self:updateTimePause()
-        self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedThreeInterval())) .. ";" .. inspect(self:checkSignal2()) .. ";" .. inspect(self:getMedian(self:getMeanList(), 10)).. "\n");
+        self.logfile:write(dateDeal..";Продажа;" .. (self:getCurrentPrice() ~= nil and self:getCurrentPrice() or "nil") .. ";1;" .. (self:getPosition() ~= nil and self:getPosition() or "nil") .. ";" .. self:getProfitAbs().. ";".. inspect(self:getSpeedMean(self:getSpeedInterval())) .. ";" .. inspect(self:getSpeedMean(self:getSpeedTwoInterval())) .. ";" .. inspect(self:checkSignal1()) .. ";" .. inspect(self:checkSignal3()) .. ";" .. inspect(self:checkSignal4()).. ";" .. inspect(self:checkSignal5()).. ";" .. inspect(self:checkSignal6()).. "\n");
         self:setPosition(0)
         self:setPositionPrice(nil)
     end
@@ -685,6 +788,29 @@ function TradeCondition:getBidSpeed()
     return self.bidSpeed
 end
 
+--function TradeCondition:checkBid(speedKoef, rev)
+--    if speedKoef == nil then
+--        speedKoef =1
+--    end
+--    if rev == nil then
+--        rev =false
+--    end
+--    local mean = self:getMedian(self:getMeanList(), 10);
+--    if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > (self:getSpeedTrade()*speedKoef) and
+--            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
+--            round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedInterval()).ask,2) and
+--            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) or
+----            round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) or
+--            (rev == false and self:checkPosition() ~= false and round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
+--        return true
+--    end
+--    return false
+--end
+
+function TradeCondition:signalSum()
+   return (self:checkSignal4() + self:checkSignal5() + self:checkSignal6())
+end
+
 function TradeCondition:checkBid(speedKoef, rev)
     if speedKoef == nil then
         speedKoef =1
@@ -692,17 +818,42 @@ function TradeCondition:checkBid(speedKoef, rev)
     if rev == nil then
         rev =false
     end
-    local mean = self:getMedian(self:getMeanList(), 10);
-    if round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > (self:getSpeedTrade()*speedKoef) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
-            round(self:getSpeedMean(self:getSpeedInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedInterval()).ask,2) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) or
---            round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) or
-            (rev == false and self:checkPosition() ~= false and round(mean.bid + 1,2) / round(mean.ask + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
-        return true
+    if self:checkPosition() == false or rev == true  then
+        if self:signalSum() < -2
+        then
+            return true
+        else
+            return false
+        end
+    else
+        if self:signalSum() < -1
+        then
+            return true
+        else
+            return false
+        end
     end
     return false
 end
+
+--function TradeCondition:checkAsk(speedKoef, rev)
+--    if speedKoef == nil then
+--        speedKoef =1
+--    end
+--    if rev == nil then
+--        rev =false
+--    end
+--    local mean = self:getMedian(self:getMeanList(), 10);
+--    if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > (self:getSpeedTrade()*speedKoef) and
+--            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
+--            round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedInterval()).bid,2) and
+--            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) or
+----            round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) or
+--            (rev == false and self:checkPosition() ~= false and round(mean.ask + 1,2) > round(mean.bid + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
+--        return true
+--    end
+--    return false
+--end
 
 function TradeCondition:checkAsk(speedKoef, rev)
     if speedKoef == nil then
@@ -711,32 +862,53 @@ function TradeCondition:checkAsk(speedKoef, rev)
     if rev == nil then
         rev =false
     end
-    local mean = self:getMedian(self:getMeanList(), 10);
-    if round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > (self:getSpeedTrade()*speedKoef) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > ((self:getSpeedTrade()*speedKoef) / 2) and
-            round(self:getSpeedMean(self:getSpeedInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedInterval()).bid,2) and
-            round(self:getSpeedMean(self:getSpeedTwoInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedTwoInterval()).bid,2) or
---            round(self:getSpeedMean(self:getSpeedThreeInterval()).ask,2) > round(self:getSpeedMean(self:getSpeedThreeInterval()).bid,2) or
-            (rev == false and self:checkPosition() ~= false and round(mean.ask + 1,2) > round(mean.bid + 1,2) > 2) and round(mean.bid,2) ~= 0 and round(mean.ask,2) ~= 0 then
-        return true
+    if self:checkPosition() == false or rev == true  then
+        if self:signalSum() > 2
+        then
+            return true
+        else
+            return false
+        end
+    else
+        if self:signalSum() > 1
+        then
+            return true
+        else
+            return false
+        end
     end
     return false
 end
 
+--function TradeCondition:checkRev()
+--    local ask = self:getSpeedMean(self:getSpeedTwoInterval()).ask < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).ask
+--    local bid = self:getSpeedMean(self:getSpeedTwoInterval()).bid < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).bid
+--    PrintDbgStr("Reward?")
+--    PrintDbgStr(inspect(
+--        {(round(ask,2) / round(bid,2)) , (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2) / round(ask,2))}
+--    ))
+--    if self:isShort() then
+--        if (round(ask, 2) / round(bid, 2)) > self:getRevMult() and self:checkAsk() then
+--            return true
+--        end
+--    end
+--    if self:isLong() then
+--        if (round(bid, 2) / round(ask, 2)) > self:getRevMult() and self:checkBid() then
+--            return true
+--        end
+--    end
+--    return false
+--end
+
 function TradeCondition:checkRev()
-    local ask = self:getSpeedMean(self:getSpeedTwoInterval()).ask < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).ask
-    local bid = self:getSpeedMean(self:getSpeedTwoInterval()).bid < 2 and 2 or self:getSpeedMean(self:getSpeedTwoInterval()).bid
     PrintDbgStr("Reward?")
-    PrintDbgStr(inspect(
-        {(round(ask,2) / round(bid,2)) , (round(self:getSpeedMean(self:getSpeedTwoInterval()).bid + 1,2) / round(ask,2))}
-    ))
     if self:isShort() then
-        if (round(ask, 2) / round(bid, 2)) > self:getRevMult() and self:checkAsk() then
+        if self:checkAsk(self:getSpeedKoef(), true) then
             return true
         end
     end
     if self:isLong() then
-        if (round(bid, 2) / round(ask, 2)) > self:getRevMult() and self:checkBid() then
+        if self:checkBid(self:getSpeedKoef(), true) then
             return true
         end
     end
@@ -805,6 +977,76 @@ end
 
 function TradeCondition:getPosition()
     return self.position
+end
+
+function TradeCondition:stats_mean( t )
+    local sum = 0
+    local count= 0
+
+    for k,v in pairs(t) do
+        if type(v) == 'number' then
+            sum = sum + v
+            count = count + 1
+        end
+    end
+
+    return (sum / count)
+end
+
+function TradeCondition:stats_search(items, val)
+    for key,v in pairs(items) do
+        if v == val then
+            return key - 1
+        end
+    end
+    return false
+end
+
+function TradeCondition:stats_standardDeviation( t )
+    local m
+    local vm
+    local sum = 0
+    local count = 0
+    local result
+
+    m = self:stats_mean( t )
+
+    for k,v in pairs(t) do
+        if type(v) == 'number' then
+            vm = v - m
+            sum = sum + (vm * vm)
+            count = count + 1
+        end
+    end
+    result = math.sqrt(sum / (count-1))
+
+    return result
+end
+
+function TradeCondition:tableMean(t)
+    local mean = self:stats_mean( t )
+
+    local tbl = {}
+    for k,v in pairs(t) do
+        if type(v) == 'number' then
+            v = v - mean
+            table.insert( tbl, round(v , 2) )
+        end
+    end
+    return tbl
+end
+
+function TradeCondition:tableMean2(t)
+    local mean = self:stats_standardDeviation( t )
+    local tbl = {}
+    for k,v in pairs(t) do
+        if type(v) == 'number' then
+            local t = v / mean
+            v = t > 0 and math.floor(t) or math.ceil(t)
+            table.insert( tbl, round(v , 2) )
+        end
+    end
+    return tbl
 end
 
 function TradeCondition:meanFactory(length)
@@ -877,6 +1119,16 @@ function TradeCondition:tableSlice(tbl, first, last, step)
     return sliced
 end
 
+function TradeCondition:tableSliceSimple(tbl, first, last, step)
+    local sliced = {}
+
+    for i = first or 1, last or #tbl, step or 1 do
+        sliced[#sliced+1] = tbl[i]
+    end
+
+    return sliced
+end
+
 function TradeCondition:getMedian(t, length)
     local temp = self:tableSlice(t, #t.ask-length > 0 and #t.ask-length or 1, #t.ask)
 
@@ -908,6 +1160,32 @@ function TradeCondition:getMedian(t, length)
     --    speed
     --  ))
     return mean
+end
+
+function TradeCondition:getSortMedian(t, length)
+    local temp = self:tableSliceSimple(t, #t-length > 0 and #t-length or 1, #t)
+
+    table.sort( temp )
+    return temp
+end
+
+function TradeCondition:getMedianSimple(t, length)
+    local temp = self:getSortMedian(t, length)
+--    PrintDbgStr(inspect(
+--        t
+--    ))
+
+    local mean = {}
+
+    if math.fmod(#temp,2) == 0 then
+        mean = ( temp[#temp/2] + temp[(#temp/2)+1] ) / 2
+        return mean
+    else
+        mean = temp[math.ceil(#temp/2)]
+        return mean
+    end
+    return mean
+
 end
 
 
