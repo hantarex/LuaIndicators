@@ -151,6 +151,7 @@ function cb( index )
             signal4 = myTrade:checkSignal4(),
             signal5 = myTrade:checkSignal5(),
             signal6 = myTrade:checkSignal6(),
+            signal7 = myTrade:checkSignal7(),
             signal_sum = myTrade:signalSum(),
         }
     ))

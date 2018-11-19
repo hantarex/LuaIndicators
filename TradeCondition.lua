@@ -462,13 +462,20 @@ end
 
 function TradeCondition:checkSignal4()
     local candleDiff = self:getCandleDiff()
-    return self:getMedianSimple(candleDiff, 10)
+    return self:sigmoid2(self:getMedianSimple(candleDiff, 50, true))
+end
+
+function TradeCondition:checkSignal7()
+    local candleDiff = self:getCandleDiff()
+    return self:sigmoid2(self:getMeanOfTable(self:getSortMedian(candleDiff, 10)))
 end
 
 function TradeCondition:checkSignal5()
-    local tbl = self:tableMean2(self:tableMean(self:getSortMedian(self:getCandleDiff(), 9)))
+    local tbl = self:tableMean2(self:tableMean(self:getSortMedian(self:getCandleDiff(), 49)))
     local zeros = 0
-
+--    PrintDbgStr(inspect(
+--        tbl
+--    ))
     for key,value in pairs(tbl) do
         if value == 0 then zeros = zeros + 1 end
     end
@@ -477,17 +484,31 @@ function TradeCondition:checkSignal5()
     if key_zero == false then return false end
     local center = key_zero + zeros
     if center / (#tbl/2) > 1 then
-        return math.abs((#tbl/2) - center)
+        return self:sigmoid(math.abs((#tbl/2) - center))
     else
-        return 0 - math.abs((#tbl/2) - center)
+        return self:sigmoid(0 - math.abs((#tbl/2) - center))
     end
+end
+
+function TradeCondition:sigmoid(x)
+    if math.abs(x) < 0.5 then
+        return 0
+    end
+    return round(x / ( 1 + math.abs(x)),0)
+end
+
+function TradeCondition:sigmoid2(x)
+    if math.abs(x) < 0.5 then
+        return 0
+    end
+    return round(math.tanh (x),0)
 end
 
 function TradeCondition:checkSignal6()
     local sign = self:checkSignal1()
     local x
     PrintDbgStr(inspect(
-        self:getSpeedTrade()
+        sign
     ))
     if sign.vol < self:getSpeedTrade() then
         return 0
@@ -1169,11 +1190,30 @@ function TradeCondition:getSortMedian(t, length)
     return temp
 end
 
-function TradeCondition:getMedianSimple(t, length)
+function TradeCondition:removeZeros(t)
+    local temp = {}
+
+    for key,v in pairs(t) do
+        if v ~= 0 then
+            table.sinsert(temp,v)
+        end
+    end
+
+    return temp
+end
+
+function TradeCondition:getMedianSimple(t, length, zeros)
+    if zeros == nil then
+        zeros = false
+    end
     local temp = self:getSortMedian(t, length)
 --    PrintDbgStr(inspect(
 --        t
 --    ))
+
+    if zeros == true then
+        temp = self:removeZeros(temp)
+    end
 
     local mean = {}
 
@@ -1188,6 +1228,18 @@ function TradeCondition:getMedianSimple(t, length)
 
 end
 
+function TradeCondition:getMeanOfTable(t)
+    local mean = 0
+    PrintDbgStr(inspect(
+        t
+    ))
+    for k,v in pairs(t) do
+        mean = mean + v
+    end
 
+    mean = mean / #t
+
+    return mean
+end
 
 return TradeCondition
