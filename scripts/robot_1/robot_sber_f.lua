@@ -206,7 +206,9 @@ function WriteLogDeal(logfile, deal)
             PrintDbgStr("¬ход в LONG")
             myTrade:goBuy(t.param_value)
         elseif myTrade:isLong() then -- если в лонге
-
+            if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
+                myTrade:closePosition(t.param_value)
+            end
         end
     elseif myTrade:isSpeedDown() then -- падает
         PrintDbgStr("ѕадает " .. (myTrade:getProfit() ~= nil and myTrade:getProfit() or "nil") .. " " .. (myTrade:getNeedProfit() ~=nil and myTrade:getNeedProfit() or "nil") .. " " .. (myTrade:getPositionPrice() ~=nil and myTrade:getPositionPrice() or "nil") .. " ".. myTrade:getLastDealMark())
@@ -226,7 +228,9 @@ function WriteLogDeal(logfile, deal)
             PrintDbgStr("¬ход в SHORT")
             myTrade:goSell(t.param_value)
         elseif myTrade:isShort() then -- если в шорте
-
+            if myTrade:getProfit() > myTrade:getNeedProfit() then -- если заработал то выходим из шорта
+                myTrade:closePosition(t.param_value)
+            end
         end
     end
     --  PrintDbgStr(inspect(

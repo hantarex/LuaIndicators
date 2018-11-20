@@ -505,7 +505,7 @@ function TradeCondition:sigmoid2(x , add)
 end
 
 function TradeCondition:checkSignal6()
-    local sign = self:checkSignal1()
+    local sign = self:checkSignal3()
     local x
 --    PrintDbgStr(inspect(
 --        {
@@ -513,17 +513,23 @@ function TradeCondition:checkSignal6()
 --            speed = self:getStartSpeedTrade()
 --        }
 --    ))
-    if sign.vol < self:getStartSpeedTrade() then
+    if sign.vol < self:getSpeedTrade() then
         return 0
     end
     sign.ask = tonumber(sign.ask)
     sign.bid = tonumber(sign.bid)
     if sign.ask > sign.bid then
-        x = math.log(math.floor(sign.ask / sign.bid))
+        x = math.log(sign.ask / sign.bid)
     else
-        x = 0 - math.log(math.floor(sign.bid / sign.ask))
+        x = 0 - math.log(sign.bid / sign.ask)
     end
-    return self:sigmoid2(x*2, 2)
+    PrintDbgStr(inspect(
+        {
+            sig6= x,
+            sig = sign
+        }
+    ))
+    return self:sigmoid2(x*1.5, 2)
 --    return round(3 * x / ( 2 + math.abs(x)),0)
 end
 
@@ -833,7 +839,7 @@ end
 --end
 
 function TradeCondition:signalSum()
-   return (self:checkSignal4() + self:checkSignal5() + self:checkSignal6() + self:checkSignal7())
+   return (self:checkSignal5() + self:checkSignal6() + self:checkSignal7())
 end
 
 function TradeCondition:checkBid(speedKoef, rev)
@@ -844,14 +850,14 @@ function TradeCondition:checkBid(speedKoef, rev)
         rev =false
     end
     if self:checkPosition() == false or rev == true  then
-        if self:signalSum() < -3
+        if self:signalSum() < -2
         then
             return true
         else
             return false
         end
     else
-        if self:signalSum() < -1
+        if self:signalSum() < 0
         then
             return true
         else
@@ -888,14 +894,14 @@ function TradeCondition:checkAsk(speedKoef, rev)
         rev =false
     end
     if self:checkPosition() == false or rev == true  then
-        if self:signalSum() > 3
+        if self:signalSum() > 2
         then
             return true
         else
             return false
         end
     else
-        if self:signalSum() > 1
+        if self:signalSum() > 0
         then
             return true
         else
