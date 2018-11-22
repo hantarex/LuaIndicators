@@ -440,7 +440,7 @@ function TradeCondition:checkSignal3()
     local myTable = {
         self:getSpeedMean(self:getSpeedInterval()),
         self:getSpeedMean(self:getSpeedTwoInterval()),
-        self:getSpeedMean(self:getSpeedThreeInterval()),
+--        self:getSpeedMean(self:getSpeedThreeInterval()),
     }
 --        PrintDbgStr(inspect(
 --            myTable
@@ -513,7 +513,7 @@ function TradeCondition:checkSignal6()
 --            speed = self:getStartSpeedTrade()
 --        }
 --    ))
-    if sign.vol < self:getSpeedTrade() then
+    if sign.ask < self:getSpeedTrade() and sign.bid < self:getSpeedTrade() or sign.vol < (self:getSpeedTrade() * 2) then
         return 0
     end
     sign.ask = tonumber(sign.ask)
@@ -839,7 +839,7 @@ end
 --end
 
 function TradeCondition:signalSum()
-   return (self:checkSignal5() + self:checkSignal6() + self:checkSignal7())
+   return (self:checkSignal7() + self:checkSignal6() + self:checkSignal5())
 end
 
 function TradeCondition:checkBid(speedKoef, rev)
