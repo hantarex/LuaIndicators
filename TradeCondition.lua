@@ -857,7 +857,7 @@ function TradeCondition:checkBid(speedKoef, rev)
             return false
         end
     else
-        if self:signalSum() < 0
+        if self:signalSum() < -1
         then
             return true
         else
@@ -901,7 +901,7 @@ function TradeCondition:checkAsk(speedKoef, rev)
             return false
         end
     else
-        if self:signalSum() > 0
+        if self:signalSum() > 1
         then
             return true
         else
