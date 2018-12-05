@@ -180,8 +180,6 @@ function cb( index )
         }
     }
 
-    PrintDbgStr(inspect(index))
-
     local contents = json.encode(data)
 
     WriteLog(logfile, contents);

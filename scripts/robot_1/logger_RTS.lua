@@ -148,7 +148,6 @@ function cb( index )
 
     myTrade:setBidSpeed(bidSpeed)
     myTrade:setAskSpeed(askSpeed)
-    PrintDbgStr(tostring(myTrade:getSpeedTrade() / 2))
 --    PrintDbgStr(inspect(
 --        {
 --            price = ds:C(index),
