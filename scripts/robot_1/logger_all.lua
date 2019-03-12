@@ -4,7 +4,7 @@ local inspect = require('inspect')
 local jsonStorage = require('jsonStorage')
 local json = require('json')
 local TradeCondition = require("TradeCondition")
-
+local logfile
 local config = "config_all.cfg"
 local is_run = true
 
@@ -24,19 +24,80 @@ function OnStop()
     is_run = false
 end
 
-AllTraiding = {}
-function AllTraiding:calc()
-    local end_index = getNumberOf("all_trades")
-    SearchItems ("all_trades", self.start_index, end_index, bind(self,'dataTraiding'))
-    self.start_index = end_index
+function OnDestroy()
+    logfile:close() -- Закрывает файл
 end
 
-function AllTraiding:dataTraiding(traid)
-    for key,val in pairs(self.config.SEC_CODES) do
-        if traid.sec_code == val then
-            PrintDbgStr(inspect(traid.qty))
+AllTraiding = {
+    start_index = getNumberOf("all_trades")-1,
+    active = {},
+    data = {},
+    time = os.time(os.date("!*t"))
+}
+
+function AllTraiding.tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end
+
+function AllTraiding.setData(type, sec, data)
+    if AllTraiding.tablelength(AllTraiding.data) == 0 then
+        for _,val in pairs(AllTraiding.config.SEC_CODES) do
+            AllTraiding.data[val] = {
+                candle = {},
+                all_trades = {}
+            }
         end
     end
+    table.sinsert(AllTraiding.data[sec][type],data)
+    local now = os.time(os.date("!*t"))
+    if (now - AllTraiding.time) == 0 then
+        return
+    end
+    AllTraiding.time = now
+
+    for _,val in pairs(AllTraiding.config.SEC_CODES) do
+        AllTraiding.data[val]["price_stock"] = getQuoteLevel2(AllTraiding.config.CLASS_CODE,val)
+        AllTraiding.data[val]["price"] = getParamEx2(AllTraiding.config.CLASS_CODE,val,"bid")
+    end
+--    for _,val in pairs(AllTraiding.config.SEC_CODES) do
+--        for _, val1 in pairs({"all_trades", "candle"}) do
+--            if #AllTraiding.data[val][val1] == 0 then
+--                return
+--            end
+--        end
+--    end
+
+    -- Если набор данных собран, выгружаем в файл.
+    AllTraiding.data['time'] = AllTraiding.time
+    local contents = json.encode(AllTraiding.data)
+    AllTraiding.data={}
+    logfile:write(contents.."\n");
+    logfile:flush();
+end
+
+function AllTraiding.calc()
+    if #AllTraiding.active == 0 then
+        table.sinsert(AllTraiding.active,1,1)
+        local end_index = getNumberOf("all_trades")-1
+        local table_index = SearchItems ("all_trades", AllTraiding.start_index, end_index, AllTraiding['dataTraiding'])
+--        PrintDbgStr(inspect(AllTraiding.start_index .. " " .. end_index))
+    --    PrintDbgStr(inspect(table_index))
+        AllTraiding.start_index = end_index+1
+    end
+    table.sremove(AllTraiding.active,1)
+end
+
+function AllTraiding.dataTraiding(traid)
+    for key,val in pairs(AllTraiding.config.SEC_CODES) do
+        if traid.sec_code == val then
+--            PrintDbgStr(inspect(traid.qty))
+            AllTraiding.setData("all_trades", val, traid)
+            return true
+        end
+    end
+    return false
 end
 
 DataSourceClass = {}
@@ -63,8 +124,13 @@ function DataSourceClass:data(index)
     if self.end_candle > index then
         return
     end
-    AllTraiding:calc()
---    PrintDbgStr(inspect(index))
+    local candle = {}
+    for _, val in pairs({'C','H','L','O','T','V'}) do
+        table.sinsert(candle,self.ds[val](self.ds, index))
+--        PrintDbgStr(inspect(self.ds[val](self.ds, index)))
+    end
+    AllTraiding.setData("candle", self.SEC_CODES, candle)
+    AllTraiding.calc()
     self.end_candle = self.ds:Size()
 end
 
@@ -116,6 +182,7 @@ function bind(cls, method)
 end
 
 function main()
+    logfile=io.open(getScriptPath() .. "/logger/logger_all_" .. os.date("%d%m%Y")..".json", "a+")
     local logger = LoggerClass()
     logger:initData()
 
