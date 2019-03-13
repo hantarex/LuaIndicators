@@ -125,6 +125,7 @@ function DataSourceClass:data(index)
         return
     end
     local candle = {}
+    table.sinsert(candle,index)
     for _, val in pairs({'C','H','L','O','T','V'}) do
         table.sinsert(candle,self.ds[val](self.ds, index))
 --        PrintDbgStr(inspect(self.ds[val](self.ds, index)))
