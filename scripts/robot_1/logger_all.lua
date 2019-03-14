@@ -159,6 +159,7 @@ function LoggerClass:initData()
     AllTraiding.config = self.config
     for key,val in pairs(self.config.SEC_CODES) do
         PrintDbgStr(inspect(Subscribe_Level_II_Quotes(self.config.CLASS_CODE, val)))
+        PrintDbgStr(inspect(ParamRequest(self.config.CLASS_CODE, val, "bid")))
         local ds = CreateDataSource(self.config.CLASS_CODE, val, INTERVAL_M5)
         local data = DataSourceClass({
             ds = ds,
