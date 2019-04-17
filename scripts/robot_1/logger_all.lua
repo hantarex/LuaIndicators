@@ -43,11 +43,13 @@ end
 
 function AllTraiding.setData(type, sec, data)
     if AllTraiding.tablelength(AllTraiding.data) == 0 then
-        for _,val in pairs(AllTraiding.config.SEC_CODES) do
-            AllTraiding.data[val] = {
-                candle = {},
-                all_trades = {}
-            }
+        for key_code, _ in pairs(AllTraiding.config.CLASS_CODE) do
+            for _,val in pairs(AllTraiding.config.SEC_CODES[key_code]) do
+                AllTraiding.data[val] = {
+                    candle = {},
+                    all_trades = {}
+                }
+            end
         end
     end
     table.sinsert(AllTraiding.data[sec][type],data)
@@ -57,10 +59,13 @@ function AllTraiding.setData(type, sec, data)
     end
     AllTraiding.time = now
 
-    for _,val in pairs(AllTraiding.config.SEC_CODES) do
-        AllTraiding.data[val]["price_stock"] = getQuoteLevel2(AllTraiding.config.CLASS_CODE,val)
-        AllTraiding.data[val]["price"] = getParamEx2(AllTraiding.config.CLASS_CODE,val,"bid")
+    for key_code, class_code in pairs(AllTraiding.config.CLASS_CODE) do
+        for _,val in pairs(AllTraiding.config.SEC_CODES[key_code]) do
+            AllTraiding.data[val]["price_stock"] = getQuoteLevel2(class_code,val)
+            AllTraiding.data[val]["price"] = getParamEx2(class_code,val,"bid")
+        end
     end
+
 --    for _,val in pairs(AllTraiding.config.SEC_CODES) do
 --        for _, val1 in pairs({"all_trades", "candle"}) do
 --            if #AllTraiding.data[val][val1] == 0 then
@@ -90,11 +95,13 @@ function AllTraiding.calc()
 end
 
 function AllTraiding.dataTraiding(traid)
-    for key,val in pairs(AllTraiding.config.SEC_CODES) do
-        if traid.sec_code == val then
---            PrintDbgStr(inspect(traid.qty))
-            AllTraiding.setData("all_trades", val, traid)
-            return true
+    for key_code, class_code in pairs(AllTraiding.config.CLASS_CODE) do
+        for key,val in pairs(AllTraiding.config.SEC_CODES[key_code]) do
+            if traid.sec_code == val then
+    --            PrintDbgStr(inspect(traid.qty))
+                AllTraiding.setData("all_trades", val, traid)
+                return true
+            end
         end
     end
     return false
@@ -157,17 +164,20 @@ function LoggerClass:initData()
     local instanse = {}
     AllTraiding.start_index = getNumberOf("all_trades")-1;
     AllTraiding.config = self.config
-    for key,val in pairs(self.config.SEC_CODES) do
-        PrintDbgStr(inspect(Subscribe_Level_II_Quotes(self.config.CLASS_CODE, val)))
-        PrintDbgStr(inspect(ParamRequest(self.config.CLASS_CODE, val, "bid")))
-        local ds = CreateDataSource(self.config.CLASS_CODE, val, INTERVAL_M5)
-        local data = DataSourceClass({
-            ds = ds,
-            SEC_CODES = val,
-            CLASS_CODE = self.config.CLASS_CODE
-        })
-        ds:SetUpdateCallback(bind(data, 'data'))
-        table.insert(instanse,data)
+    for key_code, val_code in pairs(self.config.CLASS_CODE) do
+        for key,val in pairs(self.config.SEC_CODES[key_code]) do
+            PrintDbgStr(inspect({val_code, val}))
+            PrintDbgStr(inspect(Subscribe_Level_II_Quotes(val_code, val)))
+            PrintDbgStr(inspect(ParamRequest(val_code, val, "bid")))
+            local ds = CreateDataSource(val_code, val, INTERVAL_M5)
+            local data = DataSourceClass({
+                ds = ds,
+                SEC_CODES = val,
+                CLASS_CODE = val_code
+            })
+            ds:SetUpdateCallback(bind(data, 'data'))
+            table.insert(instanse,data)
+        end
     end
     self.instanse = instanse
 end
