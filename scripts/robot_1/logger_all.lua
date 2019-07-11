@@ -200,6 +200,6 @@ function main()
 
 --    PrintDbgStr(inspect(logger.instanse))
     while is_run do
-        sleep(1000)
+        sleep(500)
     end
 end
