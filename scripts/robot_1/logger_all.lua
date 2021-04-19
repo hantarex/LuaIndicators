@@ -25,7 +25,7 @@ function OnStop()
 end
 
 function OnDestroy()
-    logfile:close() -- Закрывает файл
+    logfile:close() -- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 end
 
 AllTraiding = {
@@ -74,7 +74,7 @@ function AllTraiding.setData(type, sec, data)
 --        end
 --    end
 
-    -- Если набор данных собран, выгружаем в файл.
+    -- пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ.
     AllTraiding.data['time'] = AllTraiding.time
     local contents = json.encode(AllTraiding.data)
     AllTraiding.data={}

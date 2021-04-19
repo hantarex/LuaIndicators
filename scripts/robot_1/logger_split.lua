@@ -177,16 +177,16 @@ function LoggerClass:initData()
             PrintDbgStr(inspect({val_code, val}))
             PrintDbgStr(inspect(Subscribe_Level_II_Quotes(val_code, val)))
             PrintDbgStr(inspect(ParamRequest(val_code, val, "bid")))
-            local ds = CreateDataSource(val_code, val, INTERVAL_M1)
+            local ds = CreateDataSource(val_code, val, INTERVAL_H1)
             local data = DataSourceClass({
                 ds = ds,
                 SEC_CODES = val,
                 CLASS_CODE = val_code
             })
+            PrintDbgStr(inspect(ds:Size()))
             for i = 2, data.end_candle do
                 data:write(i)
             end
-
             AllTraiding.calc(0, AllTraiding.start_index)
 
             ds:SetUpdateCallback(bind(data, 'data'))
@@ -219,18 +219,19 @@ function bind(cls, method)
 end
 
 function main()
-    logfile_candle=io.open(getScriptPath() .. "/logger/logger_split_candle_" .. os.date("%d%m%Y")..".tsv", "w+")
+    cfg = jsonStorage.loadTable(getScriptPath().."/config/"..config)
+    logfile_candle=io.open(getScriptPath() .. "/logger/logger_"..cfg.CLASS_CODE[1].."_"..cfg.SEC_CODES[1][1].."_split_candle_" .. os.date("%d%m%Y")..".tsv", "w+")
     logfile_candle:write("Time".."\t".."Open".."\t".."High".."\t".."Low".."\t".."Close".."\t".."Volume".."\n")
-    logfile_price=io.open(getScriptPath() .. "/logger/logger_split_price_" .. os.date("%d%m%Y")..".tsv", "w+")
+    logfile_price=io.open(getScriptPath() .. "/logger/logger_"..cfg.CLASS_CODE[1].."_"..cfg.SEC_CODES[1][1].."_split_price_" .. os.date("%d%m%Y")..".tsv", "w+")
     logfile_price:write("Time".."\t".."Price".."\n")
-    logfile_stock=io.open(getScriptPath() .. "/logger/logger_split_stock_" .. os.date("%d%m%Y")..".tsv", "w+")
+    logfile_stock=io.open(getScriptPath() .. "/logger/logger_"..cfg.CLASS_CODE[1].."_"..cfg.SEC_CODES[1][1].."_split_stock_" .. os.date("%d%m%Y")..".tsv", "w+")
     logfile_stock:write("Time".."\t".."Stock".."\n")
-    logfile_trades=io.open(getScriptPath() .. "/logger/logger_split_trades_" .. os.date("%d%m%Y")..".tsv", "w+")
+    logfile_trades=io.open(getScriptPath() .. "/logger/logger_"..cfg.CLASS_CODE[1].."_"..cfg.SEC_CODES[1][1].."_split_trades_" .. os.date("%d%m%Y")..".tsv", "w+")
     logfile_trades:write("Time".."\t".."Qty".."\t".."Price".."\t".."Flag".."\t".."Open Interest".."\n")
     local logger = LoggerClass()
     logger:initData()
     while true do
-        ThreadSeconds("SPBFUT", "SRH1")
+        ThreadSeconds(cfg.CLASS_CODE[1], cfg.SEC_CODES[1][1])
         sleep(1000)
     end
 --    PrintDbgStr(inspect(logger.instanse))
